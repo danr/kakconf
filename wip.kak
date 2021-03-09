@@ -561,7 +561,8 @@ hook global WinCreate .* %{
 define-command open -menu -params 1 -shell-script-candidates %{ rg -l '' . } %{ edit %arg{1} }
 alias global o open
 
-define-command mru-open -menu -params 1 -shell-script-candidates %{ rg -l '' $(mru-dirs 100) } %{ edit %arg{1} }
+define-command mru-dirs -menu -params 1 -shell-script-candidates %{ rg -l '' $(mru-dirs 100) } %{ edit %arg{1} }
+define-command mru-open -menu -params 1 -shell-script-candidates %{ cat ~/.mru } %{ edit %arg{1} }
 alias global m mru-open
 
 def spawn -params .. %{

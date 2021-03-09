@@ -60,6 +60,8 @@ def open-show %{
         find-open
         try %{
             set window openings %val{timestamp} "%opt{opening_desc}|magenta+f"
+        } catch %{
+            set window openings %val{timestamp}
         }
     }
 }
@@ -73,5 +75,7 @@ def goto-open %{
 
 rmhooks global open-show
 
-hook -group open-show global NormalIdle .* open-show
-hook -group open-show global InsertIdle .* open-show
+hook -group open-show global WinCreate .* %{
+    hook -group open-show window NormalIdle .* open-show
+    hook -group open-show window InsertIdle .* open-show
+}
