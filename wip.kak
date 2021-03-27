@@ -461,7 +461,7 @@ hook -group kakrc global BufSetOption filetype=pug %{
 }
 
 hook global -group kakrc WinSetOption filetype=python %{
-    set buffer lintcmd 'flake8 --filename=*'
+    set buffer lintcmd 'mypy --show-column-numbers'
     #lint-enable
 }
 
