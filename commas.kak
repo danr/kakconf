@@ -33,10 +33,9 @@ def -hidden with-map -params 1..3 %{
     %arg{1}   s ']'
     eval %arg{3}
 
-
-    %arg{1}   : ' '
-    %arg{1}   q ' '
-    %arg{1}   j ' '
+    %arg{1}   : 'å'
+    %arg{1}   q 'ä'
+    %arg{1}   j 'ö'
     %arg{1}   k '\'
     %arg{1}   x '^'
     eval %arg{2}
@@ -90,34 +89,66 @@ hook -group commas global InsertChar , %{
     hook -group comma-once -once window InsertIdle .* %{
         comma-info
     }
-    hook -group comma-once -once window InsertChar .* %{
-        rmhooks window comma-once
-        modal-clear
-        def -hidden -override k -params 1..2 %{
-            try %{
-                # did we just press $1?
-                exec <a-k>\Q %arg{1} <ret>
-                # replace it with $2 then
-                exec Hc %arg{2} <esc> h
-                try %{
-                    # C calls close instead
-                    exec <a-k> C <ret>
-                    exec d
-                    close
-                }
-            }
-        }
-        eval -draft %{
-            exec h
-            with-map k
-        }
-    }
-    hook -group comma-once -once window ModeChange .* %{
+
+    def -hidden -override comma-cleanup %{
         rmhooks window comma-once
         modal-clear
     }
-    hook -group comma-once -once window RawKey .*[^\w',/\.'].* %{
-        rmhooks window comma-once
-        modal-clear
+
+    def -hidden -override k -params 1..2 %{
+        # did we just press $1?
+        hook -group comma-once -once window InsertChar "\Q%arg{1}" "comma-replace-with %arg{2}"
+    }
+
+    def -hidden -override comma-replace-with -params .. %{
+        # replace it with $2 then
+        exec <backspace><backspace> %arg{1}
+        try %{
+            # C calls close instead
+            exec -draft <esc> h <a-k> C <ret> d
+            close
+        }
+        comma-cleanup
+    }
+
+    with-map k
+    hook -group comma-once -once window ModeChange .* comma-cleanup
+    hook -group comma-once -once window InsertChar .* comma-cleanup
+    hook -group comma-once -once window RawKey [^,]+ comma-cleanup
+}
+
+def comma-replace %{
+    info -title 'replace with char' 'enter char to replace with'
+    on-key %{
+        info
+        eval %sh{
+            if test "$kak_key" = ","; then
+                echo comma-replace-comma
+            else
+                echo exec r "$kak_key"
+            fi
+        }
     }
 }
+
+def comma-replace-comma %{
+    info -title 'replace with char' %opt{comma_info}
+    on-key %{
+        def -hidden -override k -params 1..2 %{
+            eval %sh{
+                if test "$kak_key" = "$1"; then
+                    if test "$2" = "C"; then
+                        echo exec 's.<ret>d'
+                        echo close
+                    else
+                        echo exec r "$2"
+                    fi
+                fi
+            }
+        }
+        with-map k
+        info
+    }
+}
+
+map global normal r ': comma-replace<ret>'

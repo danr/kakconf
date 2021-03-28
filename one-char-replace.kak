@@ -8,7 +8,7 @@ import sys
 for desc in sys.argv[1].split(':'):
     anchor, cursor = desc.split(',')
     if anchor != cursor:
-        print("exec c")
+        print("exec -with-hooks c")
         break
 else:
     print("one-char-replace")
@@ -21,7 +21,7 @@ def -hidden one-char-replace %{
     remove-hooks window one-char-replace
   }
   hook window -group one-char-replace ModeChange .*:insert:.* %{
-   remove-hooks window one-char-replace
+    remove-hooks window one-char-replace
   }
   exec -with-hooks i
 }
