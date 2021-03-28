@@ -10,10 +10,26 @@ class Quoter():
     def __call__(self, *args, **kws):
         def with_arg(arg):
             arg = str(arg)
-            if re.search('[^a-zA-Z0-9-_.]', arg):
+            if not arg:
+                return ''
+            if re.match('[\w.-]+$', arg):
+                return arg
+            # only need to check for unbalanced really
+            elif not re.search('[()]', arg):
+                return '%(' + arg + ')'
+            elif not re.search('[{}]', arg):
+                return '%{' + arg + '}'
+            elif not re.search(r'[\[\]]', arg):
+                return '%[' + arg + ']'
+            elif not re.search('[<>]', arg):
+                return '%<' + arg + '>'
+            elif '"' not in arg:
+                return '"' + arg + '"'
+            elif "'" not in arg:
+                return "'" + arg + "'"
+            else:
                 arg = arg.replace("'", "''")
-                arg = "'" + arg + "'"
-            return arg
+                return "'" + arg + "'"
 
         def with_kws(kws):
             for k, v in kws.items():
@@ -39,25 +55,39 @@ class Quoter():
 
 q = Quoter()
 
-print(q('echo'))
-print(q(docstring='echo blecho'))
-print(q.info('hello hello', markup=True, style='above'))
-print(q.map('global', 'normal', 'x', ': what<ret>', docstring="hehehe's hello"))
-print(q.exec('bwd', try_client='client0'))
+if '--test-quoter' in sys.argv:
+    print(q('echo'))
+    print(q(docstring='echo blecho'))
+    print(q.info('hello hello', markup=True, style='above'))
+    print(q.map('global', 'normal', 'x', ': what<ret>', docstring="hehehe's hello"))
+    print(q.exec('bwd', try_client='client0'))
+    sys.exit()
 
 usage_written = False
 
 argd = dict(enumerate(sys.argv))
 
-def expose_def(func, name, args=[], switches=''):
-    if argd.get(1) == '--source':
+def expose_def(func, name, args=[], switches='', style='def'):
+    if argd.get(1) == '--source' and style != 'raw':
         # eval %sh{python file.py --source}
-        print(dedent(f"""
-            define-command {name} {switches.strip()} %(eval %sh(
-                python {sys.argv[0]} --call {name} "$@" # {' '.join(args)}
-            ))""").strip())
-    elif argd.get(1) == '--call':
-        if argd.get(2) == name:
+        if style == 'def':
+            print(dedent(f"""
+                define-command {name} {switches.strip()} %(
+                    eval %sh(
+                        python {sys.argv[0]} --call {name} "$@" # {' '.join(args)}
+                    )
+                )""").strip())
+        elif style == 'on-key':
+            print(dedent(f"""
+                define-command {name} {switches.strip()} %(
+                    on-key %(
+                        eval %sh(
+                            python {sys.argv[0]} --call {name} "$@" # {' '.join(args)}
+                        )
+                    )
+                )""").strip())
+    elif argd.get(1) == '--call' or style == 'raw':
+        if argd.get(2) == name or style == 'raw':
             ret = func(*sys.argv[3:])
             if not ret:
                 pass
@@ -68,14 +98,15 @@ def expose_def(func, name, args=[], switches=''):
                 for x in ret:
                     print(x)
                     print(x, file=sys.stderr)
-            sys.exit(0)
+            if style != 'raw':
+                sys.exit(0)
     else:
         global usage_written
         if not usage_written:
             print(f'Usage: python {sys.argv[0]} (--source|--call FUNC_NAME ...ARGS)', file=sys.stderr)
             usage_written = True
 
-def define(switches='', name=None, params=None, override=True):
+def define(switches='', name=None, params=None, override=True, style='def'):
     def inner(f):
         nonlocal switches, params, name
         sig = list(signature(f).parameters.values())
@@ -114,7 +145,7 @@ def define(switches='', name=None, params=None, override=True):
 
         name = name or f.__name__
         name = name.replace('_', '-')
-        expose_def(adapted, name, args, switches)
+        expose_def(adapted, name, args, switches, style=style)
         return f
     if callable(switches):
         f = switches
