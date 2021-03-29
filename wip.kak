@@ -530,12 +530,6 @@ set global modelinefmt %{
 %opt{modeline_info}
 %val{session}}
 
-def connect-nnn %{
-    connect-terminal sh -c '(NNN_OPENER=edit nnn; NNN_OPENER=edit bash)'
-
-}
-map global user n ': connect-nnn<ret>'
-
 def saveas -params 1 -file-completion %{ rename-buffer -file %arg{1}; write }
 
 def lsp-window-completion %{

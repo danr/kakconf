@@ -48,8 +48,17 @@ plug occivink/kakoune-sudo-write
 
 # plug occivink/kakoune-number-comparison
 
-map global user e ': lsp-hover<ret>'
-map global user . ': lsp-definition<ret>'
+map global user n ': connect-nnn<ret>'
+
+def lint-enabled %{
+    try %{
+        lint-enable
+    }
+}
+
+map global user e ': lint-enabled; lint<ret>'
+map global user n ': lint-enabled; lint-next-error<ret>'
+map global user t ': lint-enabled; lint-previous-error<ret>'
 
 def lsp-win %{
     lsp-enable-window

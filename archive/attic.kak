@@ -148,3 +148,9 @@ def mdn_search %{
     }
 }
 
+def connect-nnn %{
+    connect-terminal sh -c '(NNN_OPENER=edit nnn; NNN_OPENER=edit bash)'
+
+}
+map global user n ': connect-nnn<ret>'
+
