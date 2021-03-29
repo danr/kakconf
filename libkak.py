@@ -6,27 +6,36 @@ import re
 import sys
 import os
 
+def balanced(pairs, s):
+    open, close = pairs
+    count = 0
+    for c in s:
+        if c == open:
+            count += 1
+        elif c == close:
+            count -= 1
+            if count < 0:
+                return False
+    return count == 0
+
 class Quoter():
     def __call__(self, *args, **kws):
         def with_arg(arg):
             arg = str(arg)
             if not arg:
                 return ''
-            if re.match('[\w.-]+$', arg):
+            elif not re.search(r'''[\\\s'";%]''', arg):
                 return arg
-            # only need to check for unbalanced really
-            elif not re.search('[()]', arg):
-                return '%(' + arg + ')'
-            elif not re.search('[{}]', arg):
-                return '%{' + arg + '}'
-            elif not re.search(r'[\[\]]', arg):
-                return '%[' + arg + ']'
-            elif not re.search('[<>]', arg):
-                return '%<' + arg + '>'
-            elif '"' not in arg:
-                return '"' + arg + '"'
-            elif "'" not in arg:
+            elif not re.search(r"[\n']", arg):
                 return "'" + arg + "'"
+            elif not re.search(r'[\n"%]', arg):
+               return '"' + arg + '"'
+            elif balanced('{}', arg):
+                return '%{' + arg + '}'
+            elif balanced('()', arg):
+                return '%(' + arg + ')'
+            elif balanced('[]', arg):
+                return '%[' + arg + ']'
             else:
                 arg = arg.replace("'", "''")
                 return "'" + arg + "'"
