@@ -7,7 +7,8 @@ hook global BufCreate [^*].* %{
 }
 
 eval %sh{krc kak-defs}
-alias global t connect-terminal
+def connect-x11-terminal -params .. %{ connect x11-terminal %arg{@} }
+alias global t connect-x11-terminal
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"

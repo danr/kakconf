@@ -1,72 +1,22 @@
 
-def fzf-file -params 0..1 %{
-    fzf "edit $1" "find %arg{1} -name .git -prune -o -name .svn -prune -o -regex '.*\(bower_components\|output\|.mozilla\|firefox\|node_modules\|grunt\|cache\|Cache\|config/\(Slack\|chromium\|goole-chrome\)\).*' -prune -o \( -type d -o -type f -o -type l \) -a -not -path %arg{1} -a -not -name '.' -print | sed 's@^\./@@'"
-                # "ag -l -f -p ~/.binignore -p ~/.ignore --hidden --one-device . %arg{1}"
-                # "rg --ignore-file ~/.binignore -L --hidden --files %arg{1}"
+def fzf-kitty -params 2 %{
+    connect kitty-terminal bash -c "%arg{1} $(%arg{2} | fzf --height=100%% --preview 'test -d {} && ls --color=always -lh {} || bat --color=always {}')"
 }
 
-def fzf-code -params 0..1 %{
-    fzf "edit $1" "rg ~/config ~/code ~/build ~/dotfiles /usr/lib/python3.7 ~/.julia/packages --ignore-file ~/.binignore --files --type-add 'kak:*.kak' --type json --type py --type hs --type md --type ts --type js --type julia --type kak --type xml --type txt --type toml --type rust"
+try %{
+    declare-user-mode fzf-kitty
 }
 
-def fzf-git -params 0..1 %{
-    fzf "edit $1" "git ls-tree --name-only -r HEAD %arg{1}"
+map global normal j ': enter-user-mode fzf-kitty<ret>'
+
+try %{
+    decl str rg_types
 }
-
-def fzf-tag -params 0..1 %{
-    fzf "tag $1" "readtags -l | cut -f1 | sort -u"
-}
-
-def fzf-cd -params 0..1 %{
-    fzf "cd $1" "find %arg{1} -type d -path *.git -prune -o -type d -print"
-}
-
-def fzf -params 2 %{ eval %sh{
-    tmp=$(mktemp /tmp/kak-fzf.XXXXXX)
-    edit=$(mktemp /tmp/kak-edit.XXXXXX)
-    echo "echo eval -client $kak_client \"'$1'\" | kak -p $kak_session" > $edit
-    echo "echo -debug %file{$edit}"
-    chmod 755 $edit
-    (
-        # todo: expect ctrl-[vw] to make execute in new windows instead
-        once_float
-        urxvt -e sh -c "$2 | fzf --height 100% --reverse --color=16 -e -m --bind 'ctrl-c:execute($edit \"{}\")' > $tmp"
-        (while read file; do
-            $edit $file
-        done) < $tmp
-        rm $tmp
-        rm $edit
-    ) > /dev/null 2>&1 < /dev/null &
-} }
-
-def bufzf %{ eval %sh{
-    tmp=$(mktemp /tmp/kak-fzf.XXXXXX)
-    setbuf=$(mktemp /tmp/kak-setbuf.XXXXXX)
-    delbuf=$(mktemp /tmp/kak-delbuf.XXXXXX)
-    echo 'echo eval -client $kak_client "buffer        $1" | kak -p $kak_session' > $setbuf
-    echo 'echo eval -client $kak_client "delete-buffer $1" | kak -p $kak_session' > $delbuf
-    echo 'echo eval -client $kak_client bufzf              | kak -p $kak_session' >> $delbuf
-    chmod 755 $setbuf
-    chmod 755 $delbuf
-    (
-        # todo: expect ctrl-[vw] to make execute in new windows instead
-        once_float
-        urxvt -e sh -c "printf '%s\n' ${kak_buflist[@]} | sort |
-            fzf --height 100% --reverse --color=16 -0 -1 -e '--preview=$setbuf {}' --preview-window=up:0 --expect ctrl-d > $tmp"
-        if [ -s $tmp ]; then
-            ( read action
-              read buf
-              if [ "$action" == "ctrl-d" ]; then
-                  $setbuf $kak_bufname
-                  $delbuf $buf
-              else
-                  $setbuf $buf
-              fi) < $tmp
-        else
-            $setbuf $kak_bufname
-        fi
-        rm $tmp
-        rm $setbuf
-        rm $delbuf
-    ) > /dev/null 2>&1 < /dev/null &
-} }
+set global rg_types '--type-add kak:\*.kak --type json --type py --type hs --type md --type ts --type js --type julia --type kak --type xml --type txt --type toml --type rust'
+map global fzf-kitty F -docstring 'file ~'   ': fzf-kitty %(krc send edit) %(rg ~ --files)<ret>'
+map global fzf-kitty f -docstring file       ': fzf-kitty %(krc send edit) %(rg --files)<ret>'
+map global fzf-kitty c -docstring code       ": fzf-kitty %(krc send edit) 'rg ~ ~/.config ~/config --ignore-file ~/.binignore --files %opt{rg_types}'<ret>"
+map global fzf-kitty g -docstring 'git file' ': fzf-kitty %(krc send edit) %(git ls-tree -r --name-only HEAD)<ret>'
+map global fzf-kitty d -docstring dir        ': fzf-kitty %(krc send cd) %(fd -t d)<ret>'
+map global fzf-kitty D -docstring 'dir ~'    ': fzf-kitty %(krc send cd) %(echo ~; fd -t d . ~)<ret>'
+map global fzf-kitty b -docstring buffer     ': fzf-kitty %(krc send buffer) %(source ~/code/krc/krc-bash-aliases; buffers)<ret>'
