@@ -20,3 +20,11 @@ map global fzf-kitty g -docstring 'git file' ': fzf-kitty %(krc send edit) %(git
 map global fzf-kitty d -docstring dir        ': fzf-kitty %(krc send cd) %(fd -t d)<ret>'
 map global fzf-kitty D -docstring 'dir ~'    ': fzf-kitty %(krc send cd) %(echo ~; fd -t d . ~)<ret>'
 map global fzf-kitty b -docstring buffer     ': fzf-kitty %(krc send buffer) %(source ~/code/krc/krc-bash-aliases; buffers)<ret>'
+
+def unused-fzf-file-from-git-here %{
+    fzf-file %sh{
+        cd $(dirname $kak_buffile)
+        git rev-parse --show-toplevel
+    }
+}
+

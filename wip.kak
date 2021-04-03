@@ -261,24 +261,6 @@ map global normal <a-minus> 'ga'
 map global normal <a-d> ': db<ret>'
 map global normal <a-q> ': db!<ret>'
 
-# fzf
-import fzf
-map -docstring "bufzf"      global user b ": bufzf<ret>"
-map -docstring "fzf-file"   global user f ": fzf-file<ret>"
-map -docstring "fzf-file ~" global user F ": fzf-file ~<ret>"
-map -docstring "fzf-file"   global user <a-f> ': fzf-file %sh{dirname $kak_buffile}<ret>'
-map -docstring "fzf-code"     global user c ": fzf-code<ret>"
-# map -docstring "fzf-cd ~"   global user C ": fzf-cd ~<ret>"
-map -docstring "fzf-git"    global user g ": fzf-git<ret>"
-map -docstring "fzf git here" global user G ": fzf-file-from-git-here<ret>"
-
-def fzf-file-from-git-here %{
-    fzf-file %sh{
-        cd $(dirname $kak_buffile)
-        git rev-parse --show-toplevel
-    }
-}
-
 # Format using fmt
 map -docstring format global user q '|fmt -w 80<ret>: echo -markup {green}[sel] | fmt -w 80<ret>'
 
