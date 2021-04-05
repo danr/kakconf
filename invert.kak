@@ -1,4 +1,3 @@
-
 def invert %{
     eval -save-regs slrb %{
         exec -draft -save-regs '' '<a-:>"sZ'
