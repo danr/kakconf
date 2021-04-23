@@ -92,4 +92,5 @@ import selections
 import z-submap
 import wip
 import fzf
+import sneak
 
