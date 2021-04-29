@@ -68,7 +68,7 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', selections_des
         def -override filer-mark-rm %{
             exec <a-s><a-x>
             try %{
-                exec '<a-K>rm<ret>irm <esc>;'
+                exec '<a-K>^rm<ret>irm <esc>;'
             } catch %{
                 exec jgh
             }

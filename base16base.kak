@@ -12,7 +12,7 @@ try %{
     decl str base09
     decl str base0A
     decl str base0B
-    declare-user-modeecl str base0C
+    decl str base0C
     decl str base0D
     decl str base0E
     decl str base0F
