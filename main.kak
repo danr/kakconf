@@ -1,14 +1,18 @@
 set global startup_info_version 20301010
 
 hook global BufCreate [^*].* %{
-    %sh{
+    nop %sh{
         echo "$kak_buffile" >> ~/.mru
     }
 }
 
-eval %sh{krc kak-defs}
-def connect-x11-terminal -params .. %{ connect x11-terminal %arg{@} }
-alias global t connect-x11-terminal
+def import -params 1 %{
+    try %{
+        source %sh{echo ~/code/kakconf/$1.kak}
+    }
+}
+
+import krc
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"
@@ -76,12 +80,6 @@ def lsp-win %{
 #
 
 
-def import -params 1 %{
-    try %{
-        source %sh{echo ~/code/kakconf/$1.kak}
-    }
-}
-
 import find-open
 import commas
 import github
@@ -93,4 +91,3 @@ import z-submap
 import wip
 import fzf
 import sneak
-

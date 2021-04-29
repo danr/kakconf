@@ -12,7 +12,7 @@ try %{
     decl str base09
     decl str base0A
     decl str base0B
-    decl str base0C
+    declare-user-modeecl str base0C
     decl str base0D
     decl str base0E
     decl str base0F
@@ -70,9 +70,9 @@ face global SecondarySelection "%opt{base00},%opt{base04}"
 face global LineNumbers        "%opt{base02},%opt{base00}"
 face global LineNumberCursor   "%opt{base0A},%opt{base00}"
 face global MenuForeground     "%opt{base00},%opt{base0C}"
-face global MenuBackground     "%opt{base00},%opt{base0D}"
+face global MenuBackground     "%opt{base05},%opt{base01}"
 face global MenuInfo           "%opt{base02},%opt{base0D}"
-face global Information        "%opt{base00},%opt{base0C}"
+face global Information        "%opt{base0C},%opt{base01}"
 face global Error              "%opt{base00},%opt{base08}"
 face global StatusLine         "%opt{base04},%opt{base01}"
 face global StatusLineMode     "%opt{base0B},%opt{base01}"
