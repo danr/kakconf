@@ -14,3 +14,20 @@ def awk-env %{
         }'
     }
 }
+
+def print-args -params .. %{
+    eval %sh{
+        python -c "if 1:
+            import sys
+            import json
+            for arg in sys.argv[2:]:
+                print('echo -debug -- \'', json.dumps(arg).replace('\'', '\'\''), '\'', sep='')
+        " -- "$@"
+    }
+}
+
+def print-selections %{
+    eval reg s %val{selections}
+    print-args %reg{s}
+}
+
