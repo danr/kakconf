@@ -45,26 +45,43 @@ def go(root, opened, key=[]):
         pass
 
 @define
-def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
+def filer(command='redraw', *args, bufname, filer_path='.', filer_open='[]', filer_mark='[]'):
 
     if not bufname.startswith('*filer'):
         yield 'edit -scratch *filer*'
 
     try:
-        filer_open = json.loads(filer_open)
+        filer_open = set(json.loads(filer_open))
     except:
-        filer_open = []
+        filer_open = set()
+
+    try:
+        filer_mark = set(json.loads(filer_mark))
+    except:
+        filer_mark = set()
 
     yield '''
         declare-option line-specs filer_flags
         declare-option str filer_path .
         declare-option str filer_open []
+        declare-option str filer_mark []
 
         map window normal o 'ghGL: eval filer open %val{selections}<ret>'
         map window normal c 'ghGL: eval filer close %val{selections}<ret>'
+        map window normal m ': filer-mark toggle<ret>'
+        map window normal M ': filer-mark set<ret>'
+        map window normal <a-m> ': filer-mark remove<ret>'
 
-        rmhooks window filer-idle
-        hook window -group filer-idle NormalIdle .* %{
+        def -override filer-mark -params 1 %{
+            eval -draft %{
+                exec <a-x><a-s>
+                eval filer mark %arg{1} %val{selections}
+                echo -debug E
+            }
+            echo -debug F
+        }
+
+        def -override filer-popup %{
             eval -draft -save-regs '' %{
                 exec ghGL
                 reg s %val{selection}
@@ -79,6 +96,12 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
                     head -n $((kak_window_height / 2))
                 fi
             }
+        }
+        def -override filer-idle-popup-enable %{
+            hook window -group filer-idle-popup NormalIdle .* filer-popup
+        }
+        def -override filer-idle-popup-disable %{
+            rmhooks window filer-idle-popup
         }
 
         def -override exec-if-you-can -params 2 %{
@@ -107,24 +130,19 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
 
     at_end = []
 
-    yield q.echo('-debug', json.dumps(args))
-
     if command == 'open':
         for arg in args:
             if arg.endswith('/'):
-                filer_open += args
+                filer_open |= {arg}
             else:
                 yield q.spawn('danneopen', arg)
-        filer_open = list(set(filer_open))
-        yield q.set('window', 'filer_open', json.dumps(filer_open))
     elif command == 'close':
-        if any(arg in set(filer_open) for arg in args):
-            filer_open = list(set(filer_open) - set(args))
-            yield q.set('window', 'filer_open', json.dumps(filer_open))
+        if any(arg in filer_open for arg in args):
+            filer_open -= set(args)
         else:
             parents = set()
             for arg in args:
-                if arg not in set(filer_open):
+                if arg not in filer_open:
                     parents.add('^\Q' + str(Path(arg).parent) + '/\E$')
             parents = '(' + '|'.join(parents) + ')'
             at_end += [
@@ -135,9 +153,24 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
             ]
     elif command == 'redraw':
         pass
+    elif command == 'mark':
+        subcommand, *paths = args
+        paths = {path.strip() for path in paths}
+        if subcommand == 'toggle':
+            if any(arg not in filer_mark for arg in paths):
+                filer_mark |= paths
+            else:
+                filer_mark -= paths
+        elif subcommand == 'set':
+            filer_mark = paths
+        elif subcommand == 'remove':
+            filer_mark -= paths
+        else:
+            yield q.fail(f'no such mark {subcommand = }')
     else:
         filer_path = command
-        yield q.set('window', 'filer_path', filer_path)
+        if filer_path:
+            yield q.set('window', 'filer_path', filer_path)
 
     rows = sorted(go(filer_path, filer_open))
 
@@ -152,6 +185,11 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
         else:
             r = f'{show_ts(stat.st_mtime)} {show_size(stat.st_size):>6} '
 
+        if path in filer_mark:
+            r += '{yellow}✔ '
+        elif filer_mark:
+            r += '  '
+
         repls += [f'{i}|{r}']
         lines += [path]
 
@@ -165,6 +203,9 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
 
+    yield q.set('window', 'filer_open', json.dumps(list(sorted(list(filer_open)))))
+    yield q.set('window', 'filer_mark', json.dumps(list(sorted(list(filer_mark)))))
+
     yield r'''
         rmhl window/filer1
         rmhl window/filer2
@@ -177,7 +218,12 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
         addhl window/filerflags flag-lines magenta filer_flags
     '''
 
+    # yield q.echo('-debug', repr(filer_mark))
+
+    yield q.echo('-debug', repr(args))
+
     yield from at_end
+    yield 'echo -debug D'
 
     if ret:
         ret = '\n'.join(ret)
