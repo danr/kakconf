@@ -76,14 +76,17 @@ usage_written = False
 
 argd = dict(enumerate(sys.argv))
 
+from pathlib import Path
+
 def expose_def(func, name, args=[], switches='', style='def'):
+    argv0 = str(Path(sys.argv[0]).resolve())
     if argd.get(1) == '--source' and style != 'raw':
         # eval %sh{python file.py --source}
         if style == 'def':
             print(dedent(f"""
                 define-command {name} {switches.strip()} %(
                     eval %sh(
-                        python {sys.argv[0]} --call {name} "$@" # {' '.join(args)}
+                        python {argv0} --call {name} "$@" # {' '.join(args)}
                     )
                 )""").strip())
         elif style == 'on-key':
@@ -91,7 +94,7 @@ def expose_def(func, name, args=[], switches='', style='def'):
                 define-command {name} {switches.strip()} %(
                     on-key %(
                         eval %sh(
-                            python {sys.argv[0]} --call {name} "$@" # {' '.join(args)}
+                            python {argv0} --call {name} "$@" # {' '.join(args)}
                         )
                     )
                 )""").strip())

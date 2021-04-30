@@ -457,7 +457,7 @@ def ide %{
 }
 
 #colorscheme base16-eighties
-colorscheme base16base
+# colorscheme base16base
 #colorscheme base16bland
 
 # make import and plug look like keywords :)

@@ -6,10 +6,10 @@ import json
 from datetime import datetime
 import re
 
-from subprocess import run
 # import sys
 
 import os
+from pathlib import Path
 
 def show_ts(ts):
     return datetime.fromtimestamp(int(ts))
@@ -17,10 +17,6 @@ def show_ts(ts):
 def show_size(size, units=' KMGTPE'):
     """ Returns a human readable string representation of size """
     return str(round(size, 0)) + units[0] if size < 1000 else show_size(size / 1024, units[1:])
-
-if 0:
-    for e in os.scandir('.'):
-        print(e.is_dir(), '\t', e.stat().st_size, '\t', show_ts(e.stat().st_mtime), '\t', e.path, '\t', e.name)
 
 def go(root, opened, key=[]):
     # parent_full_path = root.getospath('.').decode()
@@ -35,8 +31,10 @@ def go(root, opened, key=[]):
             if path.startswith('./'):
                 path = path[2:]
             is_open = is_dir and path in opened
-            # if not is_open:
-            yield entry_key, is_dir, is_open, root, path, entry.stat()
+            try:
+                yield entry_key, is_dir, is_open, root, path, entry.stat()
+            except FileNotFoundError:
+                pass
             if is_open:
                 yield from go(
                     entry.path,
@@ -47,7 +45,10 @@ def go(root, opened, key=[]):
         pass
 
 @define
-def filer(command='redraw', *args, filer_open='', filer_path='.', selections_desc, timestamp):
+def filer(command='redraw', *args, filer_open='', filer_path='.', bufname):
+
+    if not bufname.startswith('*filer'):
+        yield 'edit -scratch *filer*'
 
     try:
         filer_open = json.loads(filer_open)
@@ -55,24 +56,51 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', selections_des
         filer_open = []
 
     yield '''
-        declare-option range-specs filer
         declare-option line-specs filer_flags
         declare-option str filer_path .
-        try %{ declare-option str filer_open [] }
+        declare-option str filer_open []
 
-        map window normal o 'xH: eval filer open %val{selections}<ret>'
-        map window normal c 'xH: filer close %val{selection}<ret>'
-        map window user x ': eval fg %val{selections}; filer<ret>'
-        map window normal D ': filer-mark-rm<ret>'
+        map window normal o 'ghGL: eval filer open %val{selections}<ret>'
+        map window normal c 'ghGL: eval filer close %val{selections}<ret>'
 
-        def -override filer-mark-rm %{
-            exec <a-s><a-x>
-            try %{
-                exec '<a-K>^rm<ret>irm <esc>;'
-            } catch %{
-                exec jgh
+        rmhooks window filer-idle
+        hook window -group filer-idle NormalIdle .* %{
+            eval -draft -save-regs '' %{
+                exec ghGL
+                reg s %val{selection}
+            }
+            info -- %sh{
+                file -i "$kak_reg_s"
+                file -b "$kak_reg_s" | fmt
+                if file -bi "$kak_reg_s" | grep -v charset=binary >/dev/null; then
+                    echo
+                    head -c 10000 "$kak_reg_s" |
+                    cut -c -80 | # $((kak_window_width / 2)) |
+                    head -n $((kak_window_height / 2))
+                fi
             }
         }
+
+        def -override exec-if-you-can -params 2 %{
+            try %{
+                exec -draft %arg{1}
+                exec %arg{1}
+            } catch %{
+                eval %arg{2}
+            }
+        }
+
+        # map window user x ': eval fg %val{selections}; filer<ret>'
+        # map window normal D ': filer-mark-rm<ret>'
+        # def -override filer-mark-rm %{
+        #     exec <a-s><a-x>
+        #     try %{
+        #         exec '<a-K>^rm<ret>irm <esc>;'
+        #     } catch %{
+        #         exec jgh
+        #     }
+        # }
+
     '''
 
     ret = []
@@ -86,25 +114,30 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', selections_des
             if arg.endswith('/'):
                 filer_open += args
             else:
-                # yield f'nop %sh[danneopen {json.dumps(arg)}]'
                 yield q.spawn('danneopen', arg)
-                # ret += [str(run(['danneopen', arg]))]
         filer_open = list(set(filer_open))
         yield q.set('window', 'filer_open', json.dumps(filer_open))
     elif command == 'close':
-        arg = args[0]
-        if arg in filer_open:
+        if any(arg in set(filer_open) for arg in args):
             filer_open = list(set(filer_open) - set(args))
             yield q.set('window', 'filer_open', json.dumps(filer_open))
         else:
-            # already closed, instead focus parent ...
+            parents = set()
+            for arg in args:
+                if arg not in set(filer_open):
+                    parents.add('^\Q' + str(Path(arg).parent) + '/\E$')
+            parents = '(' + '|'.join(parents) + ')'
             at_end += [
-                q.exec('gg/\Q', '/'.join(arg.rstrip('/').split('/')[:-1])[1:], '<ret>xH')
+                q.exec_if_you_can(
+                    '%s' + parents + '<ret>ghGL',
+                    q.fail('no parent'),
+                )
             ]
-    elif command == 'run':
-        for arg in args:
-            yield f'nop %sh[danneopen {json.dumps(arg)}]'
-            # ret += [run(['danneopen', arg])]
+    elif command == 'redraw':
+        pass
+    else:
+        filer_path = command
+        yield q.set('window', 'filer_path', filer_path)
 
     rows = sorted(go(filer_path, filer_open))
 
@@ -125,14 +158,12 @@ def filer(command='redraw', *args, filer_open='', filer_path='.', selections_des
     lines = '\n'.join(lines)
 
     yield q.eval(
-        q.reg('c', lines) + '\n',
-        q.exec('%"cR', draft=True) + '\n',
+        '\n' + q.reg('c', lines),
+        '\n' + q.exec('%|printf %s "$kak_reg_c"<ret>', draft=True),
         draft=True,
     )
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
-
-    yield 'select ' + selections_desc
 
     yield r'''
         rmhl window/filer1
