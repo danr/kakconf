@@ -129,13 +129,13 @@ prelude = r'''
     }
 
     def -override replace-buffer -params .. %{
-        exec -draft '%|' %sh{tmp=$(mktemp); printf '%s\n' "$@" > "$tmp"; echo "cat $tmp; rm $tmp"} <ret>
+        exec -draft '%|' %sh{tmp=$(mktemp --suffix=.replace_buffer); printf '%s\n' "$@" > "$tmp"; echo "cat $tmp; rm $tmp"} <ret>
     }
 
     def -override watch-dirs -params .. %{
         eval %sh{
             if [ ! -e "$kak_opt_filer_watcher" ]; then
-                filer_watcher=$(mktemp)
+                filer_watcher=$(mktemp --suffix=.filer_watcher)
                 touch "$filer_watcher"
                 echo "set window filer_watcher $filer_watcher"
                 ( {
@@ -224,8 +224,6 @@ def filer(command='', *args, bufname, filer_path='.', filer_open_json='[]', file
         if is_dir and is_open:
             open_dirs.add(path)
 
-    yield q.watch_dirs(*open_dirs)
-
     filer_mark &= paths
 
     for i, (key, is_dir, is_open, root, path, stat) in enumerate(rows, start=1):
@@ -252,6 +250,8 @@ def filer(command='', *args, bufname, filer_path='.', filer_open_json='[]', file
     yield q.set('window', 'filer_mark_json', json.dumps(list(sorted(filer_mark))))
     yield q.set('window', 'filer_open', *sorted(filer_open))
     yield q.set('window', 'filer_mark', *sorted(filer_mark))
+
+    yield q.watch_dirs(*open_dirs)
 
     yield from at_end
 
