@@ -485,11 +485,12 @@ def bufdebug %{
     set buffer debug hooks|shell|profile|keys|commands
 }
 
-hook -group kakrc global WinDisplay .* update_modeline_info
-hook -group kakrc global PromptIdle .* update_modeline_info
-hook -group kakrc global InsertIdle .* update_modeline_info
-hook -group kakrc global NormalIdle .* update_modeline_info
-hook -group kakrc global NormalKey [jknJKN] update_modeline_info
+rmhooks global update-modeline
+hook -group update-modeline global WinDisplay .* update_modeline_info
+hook -group update-modeline global PromptIdle .* update_modeline_info
+hook -group update-modeline global InsertIdle .* update_modeline_info
+hook -group update-modeline global NormalIdle .* update_modeline_info
+hook -group update-modeline global NormalKey [jknJKN] update_modeline_info
 
 def update_modeline_info %{
     try %{
