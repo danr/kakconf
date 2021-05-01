@@ -15,19 +15,10 @@ def awk-env %{
     }
 }
 
-def print-args -params .. %{
-    eval %sh{
-        python -c "if 1:
-            import sys
-            import json
-            for arg in sys.argv[2:]:
-                print('echo -debug -- \'', json.dumps(arg).replace('\'', '\'\''), '\'', sep='')
-        " -- "$@"
+def example-with-quoted-selections %{
+    # use shlex and kak_quoted_ to make a kakoune str-list to a python list of str
+    echo -debug %sh{
+        python -c 'import os, shlex; print(repr(shlex.split(os.environ["kak_quoted_selections"])))'
     }
-}
-
-def print-selections %{
-    eval reg s %val{selections}
-    print-args %reg{s}
 }
 

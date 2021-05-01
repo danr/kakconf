@@ -64,15 +64,6 @@ def -override filer-idle-popup-disable %{
     rmhooks window filer-idle-popup
 }
 
-def -override exec-if-you-can -params 2 %{
-    try %{
-        exec -draft %arg{1}
-        exec %arg{1}
-    } catch %{
-        eval %arg{2}
-    }
-}
-
 def -override redraw-when-you-see-me -params 1 %{
     eval %sh{
         if [ "$kak_bufname" = "$1" ]; then
