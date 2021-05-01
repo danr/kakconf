@@ -5,12 +5,13 @@ import json
 import os
 import re
 import sys
+import shlex
 
 class Quoter:
     def q1(self, arg):
         if isinstance(arg, list):
             return self.q1('\n '.join(arg))
-        elif re.match('^\w+$', arg):
+        elif re.match('^[\w-]+$', arg):
             return arg
         else:
             return "'" + arg.replace("'", "''") + "'"
@@ -70,6 +71,9 @@ prelude = r'''
     rmhl window/filerflags
     addhl window/filerflags flag-lines magenta filer_flags
 '''
+
+def replace_buffer(*lines):
+    return q.exec('-draft', '%|', r"printf '%s\n' " + shlex.join(lines), '<ret>')
 
 def main(command='', *args):
 
@@ -166,7 +170,7 @@ def main(command='', *args):
         repls += [f'{i}|{r}']
         lines += [path]
 
-    yield q.replace_buffer(*lines)
+    yield replace_buffer(*lines)
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
 

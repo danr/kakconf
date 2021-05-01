@@ -87,10 +87,6 @@ def -override redraw-when-you-see-me -params 1 %{
     }
 }
 
-def -override replace-buffer -params .. %{
-    exec -draft '%|' %sh{tmp=$(mktemp --suffix=.replace_buffer); printf '%s\n' "$@" > "$tmp"; echo "cat $tmp; rm $tmp"} <ret>
-}
-
 def -override watch-dirs -params .. %{
     eval %sh{
         if [ ! -e "$kak_opt_filer_watcher" ]; then
