@@ -20,8 +20,6 @@ declare-option str filer_path .
 declare-option str filer_watcher .
 declare-option str-list filer_open
 declare-option str-list filer_mark
-declare-option str filer_open_json []
-declare-option str filer_mark_json []
 
 def -override filer-on -params 1 %{
     eval -save-regs s %{

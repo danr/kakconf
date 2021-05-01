@@ -1,7 +1,6 @@
 
 from datetime import datetime
 from pathlib import Path
-import json
 import os
 import re
 import sys
@@ -79,19 +78,19 @@ def main(command='', *args):
 
     bufname=os.environ.get('kak_bufname')
     filer_path=os.environ.get('kak_opt_filer_path', '.')
-    filer_open_json=os.environ.get('kak_opt_filer_open_json', '[]')
-    filer_mark_json=os.environ.get('kak_opt_filer_mark_json', '[]')
+    filer_open=os.environ.get('kak_quoted_opt_filer_open', '')
+    filer_mark=os.environ.get('kak_quoted_opt_filer_mark', '')
 
     if not bufname.startswith('*filer'):
         yield 'edit -scratch *filer*'
 
     try:
-        filer_open = set(json.loads(filer_open_json))
+        filer_open = set(shlex.split(filer_open))
     except:
         filer_open = set()
 
     try:
-        filer_mark = set(json.loads(filer_mark_json))
+        filer_mark = set(shlex.split(filer_mark))
     except:
         filer_mark = set()
 
@@ -174,8 +173,6 @@ def main(command='', *args):
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
 
-    yield q.set('window', 'filer_open_json', json.dumps(list(sorted(filer_open))))
-    yield q.set('window', 'filer_mark_json', json.dumps(list(sorted(filer_mark))))
     yield q.set('window', 'filer_open', *sorted(filer_open))
     yield q.set('window', 'filer_mark', *sorted(filer_mark))
 
