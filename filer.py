@@ -43,84 +43,125 @@ def go(root, opened, key=[]):
     except PermissionError:
         pass
 
+prelude = r'''
+    declare-option line-specs filer_flags
+    declare-option str filer_path .
+    declare-option str-list filer_open
+    declare-option str-list filer_mark
+    declare-option str filer_open_json []
+    declare-option str filer_mark_json []
+
+    map window normal o     ': filer-on open        <ret>'
+    map window normal c     ': filer-on close       <ret>'
+    map window normal m     ': filer-on mark-toggle <ret>'
+    map window normal M     ': filer-on mark-set    <ret>'
+    map window normal <a-m> ': filer-on mark-remove <ret>'
+
+    rmhl window/filer1
+    rmhl window/filer2
+    addhl window/filer1 regex ^[^\n]*/ 0:blue
+    addhl window/filer2 regex [^/\n]*/$ 0:green
+
+    rmhl window/filerflags
+    addhl window/filerflags flag-lines magenta filer_flags
+
+    def -override filer-on -params 1 %{
+        eval -save-regs s %{
+            eval -draft %{
+                exec <a-x><a-s>
+                eval reg s %val{selections}
+            }
+            filer %arg{1} %reg{s}
+        }
+    }
+
+    def -override filer-mark -params 1 %{
+        exec <a-x><a-s>
+        filer mark %arg{1} %val{selections}
+        echo -debug E
+    }
+
+    def -override filer-popup %{
+        eval -draft -save-regs '' %{
+            exec ghGL
+            reg s %val{selection}
+        }
+        info -- %sh{
+            file -i "$kak_reg_s"
+            file -b "$kak_reg_s" | fmt
+            if file -bi "$kak_reg_s" | grep -v charset=binary >/dev/null; then
+                echo
+                head -c 10000 "$kak_reg_s" |
+                cut -c -80 | # $((kak_window_width / 2)) |
+                head -n $((kak_window_height / 2))
+            fi
+        }
+    }
+    def -override filer-idle-popup-enable %{
+        hook window -group filer-idle-popup NormalIdle .* filer-popup
+    }
+    def -override filer-idle-popup-disable %{
+        rmhooks window filer-idle-popup
+    }
+
+    def -override exec-if-you-can -params 2 %{
+        try %{
+            exec -draft %arg{1}
+            exec %arg{1}
+        } catch %{
+            eval %arg{2}
+        }
+    }
+
+    def -override redraw-when-you-see-me -params 1 %{
+        eval %sh{
+            if [ "$kak_bufname" = "$1" ]; then
+                printf %s 'filer redraw'
+            else
+                printf %s "
+                    hook -group filer-redraw -once global WinDisplay \Q$1 %{
+                        rmhooks global filer-redraw
+                        filer redraw
+                    }
+                "
+            fi
+        }
+    }
+
+    def -override replace-buffer -params .. %{
+        exec -draft '%|' %sh{tmp=$(mktemp); printf '%s\n' "$@" > "$tmp"; echo "cat $tmp; rm $tmp"} <ret>
+    }
+
+    def -override watch-dirs -params .. %{
+        nop %sh{
+            ( {
+                printf '%s\n' "$@" |
+                    inotifywait --fromfile - -e attrib,modify,move,create,delete,delete_self,unmount
+                sleep 0.55
+                printf %s "eval -client $kak_client 'redraw-when-you-see-me $kak_bufname'" |
+                    kak -p "$kak_session"
+            } & ) >/dev/null 2>/dev/null
+        }
+    }
+'''.replace('    ', ' ')
+
 @define
-def filer(command='', *args, bufname, filer_path='.', filer_open='[]', filer_mark='[]'):
+def filer(command='', *args, bufname, filer_path='.', filer_open_json='[]', filer_mark_json='[]'):
 
     if not bufname.startswith('*filer'):
         yield 'edit -scratch *filer*'
 
     try:
-        filer_open = set(json.loads(filer_open))
+        filer_open = set(json.loads(filer_open_json))
     except:
         filer_open = set()
 
     try:
-        filer_mark = set(json.loads(filer_mark))
+        filer_mark = set(json.loads(filer_mark_json))
     except:
         filer_mark = set()
 
     arg_paths = {arg.strip('\n') for arg in args}
-
-    yield '''
-        declare-option line-specs filer_flags
-        declare-option str filer_path .
-        declare-option str filer_open []
-        declare-option str filer_mark []
-
-        map window normal o     ': filer-on open        <ret>'
-        map window normal c     ': filer-on close       <ret>'
-        map window normal m     ': filer-on mark-toggle <ret>'
-        map window normal M     ': filer-on mark-set    <ret>'
-        map window normal <a-m> ': filer-on mark-remove <ret>'
-
-        def -override filer-on -params 1 %{
-            eval -save-regs s %{
-                eval -draft %{
-                    exec <a-x><a-s>
-                    eval reg s %val{selections}
-                }
-                filer %arg{1} %reg{s}
-            }
-        }
-
-        def -override filer-mark -params 1 %{
-            exec <a-x><a-s>
-            filer mark %arg{1} %val{selections}
-            echo -debug E
-        }
-
-        def -override filer-popup %{
-            eval -draft -save-regs '' %{
-                exec ghGL
-                reg s %val{selection}
-            }
-            info -- %sh{
-                file -i "$kak_reg_s"
-                file -b "$kak_reg_s" | fmt
-                if file -bi "$kak_reg_s" | grep -v charset=binary >/dev/null; then
-                    echo
-                    head -c 10000 "$kak_reg_s" |
-                    cut -c -80 | # $((kak_window_width / 2)) |
-                    head -n $((kak_window_height / 2))
-                fi
-            }
-        }
-        def -override filer-idle-popup-enable %{
-            hook window -group filer-idle-popup NormalIdle .* filer-popup
-        }
-        def -override filer-idle-popup-disable %{
-            rmhooks window filer-idle-popup
-        }
-
-        def -override exec-if-you-can -params 2 %{
-            try %{
-                exec -draft %arg{1}
-                exec %arg{1}
-            } catch %{
-                eval %arg{2}
-            }
-        }
-    '''
 
     at_end = []
 
@@ -154,8 +195,10 @@ def filer(command='', *args, bufname, filer_path='.', filer_open='[]', filer_mar
         filer_mark = arg_paths
     elif command == 'mark-remove':
         filer_mark -= arg_paths
-    elif not command:
+    elif command == 'redraw':
         pass
+    elif not command:
+        yield prelude
     else:
         filer_path = command
         if filer_path:
@@ -175,35 +218,7 @@ def filer(command='', *args, bufname, filer_path='.', filer_open='[]', filer_mar
         if is_dir and is_open:
             open_dirs.add(path)
 
-    yield q.eval(
-        '\n' + q.reg('c', '\n'.join(open_dirs) + '\n'),
-        '''
-            def -override redraw-when-you-see-me -params 1 %{
-                eval %sh{
-                    if [ "$kak_bufname" = "$1" ]; then
-                        printf %s filer
-                    else
-                        printf %s "
-                            hook -once global WinDisplay \Q$1 filer
-                        "
-                    fi
-                }
-            }
-            nop %sh{
-                ( {
-                    msg=$(
-                        printf %s "$kak_reg_c" |
-                        inotifywait --fromfile - -e attrib,move,create,delete,delete_self,unmount
-                    )
-                    printf %s "eval -client $kak_client 'redraw-when-you-see-me $kak_bufname'" | kak -p "$kak_session"
-                } & ) >/dev/null 2>/dev/null
-            }
-        ''',
-        draft=True,
-    )
-    yield '''
-
-    '''
+    yield q.watch_dirs(*open_dirs)
 
     filer_mark &= paths
 
@@ -223,28 +238,14 @@ def filer(command='', *args, bufname, filer_path='.', filer_open='[]', filer_mar
         repls += [f'{i}|{r}']
         lines += [path]
 
-    lines = '\n'.join(lines)
-
-    yield q.eval(
-        '\n' + q.reg('c', lines),
-        '\n' + q.exec('%|printf %s "$kak_reg_c"<ret>', draft=True),
-        draft=True,
-    )
+    yield q.replace_buffer(*lines)
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
 
-    yield q.set('window', 'filer_open', json.dumps(list(sorted(filer_open))))
-    yield q.set('window', 'filer_mark', json.dumps(list(sorted(filer_mark))))
-
-    yield r'''
-        rmhl window/filer1
-        rmhl window/filer2
-        addhl window/filer1 regex ^[^\n]*/ 0:blue
-        addhl window/filer2 regex [^/\n]*/$ 0:green
-
-        rmhl window/filerflags
-        addhl window/filerflags flag-lines magenta filer_flags
-    '''
+    yield q.set('window', 'filer_open_json', json.dumps(list(sorted(filer_open))))
+    yield q.set('window', 'filer_mark_json', json.dumps(list(sorted(filer_mark))))
+    yield q.set('window', 'filer_open', *sorted(filer_open))
+    yield q.set('window', 'filer_mark', *sorted(filer_mark))
 
     yield from at_end
 

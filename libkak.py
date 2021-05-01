@@ -105,11 +105,11 @@ def expose_def(func, name, args=[], switches='', style='def'):
                 pass
             elif isinstance(ret, str):
                 print(ret)
-                print(ret, file=sys.stderr)
+                # print(ret, file=sys.stderr)
             else:
                 x = '\n'.join(ret)
                 print(x)
-                print(x, file=sys.stderr)
+                # print(x, file=sys.stderr)
             if style != 'raw':
                 sys.exit(0)
     else:
