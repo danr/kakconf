@@ -31,12 +31,6 @@ def -override filer-on -params 1 %{
     }
 }
 
-def -override filer-mark -params 1 %{
-    exec <a-x><a-s>
-    filer mark %arg{1} %val{selections}
-    echo -debug E
-}
-
 def -override filer-popup %{
     eval -draft -save-regs '' %{
         exec ghGL
