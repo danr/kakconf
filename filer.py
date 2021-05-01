@@ -46,6 +46,7 @@ def go(root, opened, key=[]):
 prelude = r'''
     declare-option line-specs filer_flags
     declare-option str filer_path .
+    declare-option str filer_watcher .
     declare-option str-list filer_open
     declare-option str-list filer_mark
     declare-option str filer_open_json []
@@ -120,7 +121,6 @@ prelude = r'''
             else
                 printf %s "
                     hook -group filer-redraw -once global WinDisplay \Q$1 %{
-                        rmhooks global filer-redraw
                         filer redraw
                     }
                 "
@@ -133,14 +133,20 @@ prelude = r'''
     }
 
     def -override watch-dirs -params .. %{
-        nop %sh{
-            ( {
-                printf '%s\n' "$@" |
-                    inotifywait --fromfile - -e attrib,modify,move,create,delete,delete_self,unmount
-                sleep 0.55
-                printf %s "eval -client $kak_client 'redraw-when-you-see-me $kak_bufname'" |
-                    kak -p "$kak_session"
-            } & ) >/dev/null 2>/dev/null
+        eval %sh{
+            if [ ! -e "$kak_opt_filer_watcher" ]; then
+                filer_watcher=$(mktemp)
+                touch "$filer_watcher"
+                echo "set window filer_watcher $filer_watcher"
+                ( {
+                    printf '%s\n' "$@" |
+                        inotifywait --fromfile - -e attrib,modify,move,create,delete,delete_self,unmount
+                    sleep 0.05
+                    rm "$filer_watcher"
+                    printf %s "eval -client $kak_client 'redraw-when-you-see-me $kak_bufname'" |
+                        kak -p "$kak_session"
+                } & ) >/dev/null 2>/dev/null
+            fi
         }
     }
 '''.replace('    ', ' ')
@@ -197,11 +203,11 @@ def filer(command='', *args, bufname, filer_path='.', filer_open_json='[]', file
         filer_mark -= arg_paths
     elif command == 'redraw':
         pass
-    elif not command:
-        yield prelude
     else:
+        yield prelude
         filer_path = command
         if filer_path:
+            yield q.set('window', 'filer_watcher', '""')
             yield q.set('window', 'filer_path', filer_path)
 
     lines = []
