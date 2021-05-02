@@ -1,25 +1,26 @@
 
-eval %sh{
-    name=filer
-    dir=$(dirname "$kak_source")
-    py="$dir/$name.py"
-    vars=$(grep -o 'kak_\w*' "$py" | sort -u | tr '\n' ' ')
-    args='"$@"'
-    printf %s "
-        def -override $name -params .. %{
-            eval %sh{
-                # $vars
-                python $py $args
-            }
-        }
-    "
+def -override python -params .. %{
+    eval %sh{
+        vars=$(
+            [ "$1" = "-c" ] && printf %s "$2" || cat "$1" |
+            grep -o 'kak_\w*' | sort -u | tr '\n' ' '
+        )
+        args='"$@"'
+        printf %s "eval %sh{python $args # $vars}"
+    }
 }
 
-declare-option line-specs filer_flags
-declare-option str filer_path .
-declare-option str filer_watcher .
-declare-option str-list filer_open
-declare-option str-list filer_mark
+decl -hidden str filer_source_dir %sh{dirname "$kak_source"}
+
+def -override filer -params .. %{
+    python "%opt{filer_source_dir}/filer.py" %arg{@}
+}
+
+decl line-specs filer_flags
+decl str filer_path .
+decl str filer_watcher .
+decl str-list filer_open
+decl str-list filer_mark
 
 def -override filer-on -params 1 %{
     eval -save-regs s %{
@@ -28,6 +29,15 @@ def -override filer-on -params 1 %{
             eval reg s %val{selections}
         }
         filer %arg{1} %reg{s}
+    }
+}
+
+def -override exec-if-you-can -params 2 %{
+    try %{
+        exec -draft %arg{1}
+        exec %arg{1}
+    } catch %{
+        eval %arg{2}
     }
 }
 
