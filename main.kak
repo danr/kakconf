@@ -93,3 +93,8 @@ import fzf
 import sneak
 import base16base
 import filer
+
+def quiet %{
+    rmhooks global update-modeline
+    rmhooks window open-show
+}

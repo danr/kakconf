@@ -1,4 +1,4 @@
-def pydef -params 2 %{
+def gh-pydef -params 2 %{
     eval %sh{
         tmp=$(mktemp)
         echo "if True:
@@ -18,7 +18,7 @@ def pydef -params 2 %{
 
 def open-github-xclip %{ open-github %sh{xclip -o} }
 
-pydef 'open-github -params 1' %{
+gh-pydef 'open-github -params 1' %{
     import re, sys
     addr = sys.argv[1]
     if '//' in addr:
