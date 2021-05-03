@@ -22,3 +22,8 @@ def example-with-quoted-selections %{
     }
 }
 
+decl range-specs repl
+
+rmhl window/repl
+addhl window/repl replace-ranges repl
+set window repl %val{timestamp} '18.38,22.6|..' '20.21,22.4|..'

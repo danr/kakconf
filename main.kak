@@ -1,5 +1,7 @@
 set global startup_info_version 20301010
 
+require-module x11
+
 hook global BufCreate [^*].* %{
     nop %sh{
         echo "$kak_buffile" >> ~/.mru
@@ -94,7 +96,3 @@ import sneak
 import base16base
 import filer
 
-def quiet %{
-    rmhooks global update-modeline
-    rmhooks window open-show
-}

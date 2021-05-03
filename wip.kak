@@ -247,10 +247,6 @@ map global normal '#' ': comment-line<ret>'
 # Buffers
 hook global WinDisplay .* info-buffers
 
-map global normal j ': enter-user-mode buffers<ret>'
-map global buffers k ': enter-user-mode -lock buffers<ret>' -docstring lock
-unmap global buffers c
-
 map global normal <a-0> ': buffer *debug*<ret>'
 map global normal <a-`> ': edit ~/.kakrc<ret>'
 map global normal <a-c> ': bp<ret>'
@@ -279,9 +275,8 @@ alias global bd!  delete-buffer!
 alias global rg   grep
 def setf -params 1 %{set buffer filetype %arg{1}}
 def auinfo %{set -add window autoinfo normal}
-def gitcd  %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel}}
-def filecd %{cd %sh{echo $(dirname $kak_buffile)}}
-def autocd %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel 2>/dev/null || echo $PWD}}
+def cd-here %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel 2>/dev/null || echo $PWD}}
+alias global cd! cd-here
 
 map -docstring pwd global user ` %{: echo %val{client_env_PWD}<ret>}
 
@@ -350,10 +345,10 @@ hook global -group kakrc WinResize .* %{
     echo "%val{window_height}:%val{window_width}"
 }
 
-
-
 # auto indent
-hook -group copyindent global InsertChar \n %{ exec -draft -itersel K<a-&> }
+def retain-indent-enable %{
+    hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
+}
 
 hook -group kakrc global WinSetOption ^filetype=markdown$ %{
     set window disabled_hooks copyindent
@@ -367,7 +362,7 @@ set global grepcmd 'rg -n'
 hook global -group kakrc WinCreate .* my-window-setup
 
 hook global -group kakrc BufCreate .*(bashrc|xinitrc).* %{
-    set buffer filetype sh
+set buffer filetype sh
 }
 
 hook global -group kakrc BufCreate .*(Makefile).* %{
@@ -562,3 +557,32 @@ def fg -params .. %{
 
 alias global sh fg
 
+def chmod -params 1 %{
+    info -- %sh{
+        chmod -v "$1" "$kak_buffile"
+    }
+}
+
+def wc -params .. %{
+    info -- %sh{
+        set -x
+        eval set -- "$(printf '%s' "$kak_quoted_buflist" | sed "s,~,$HOME,g")"
+        wc "$@"
+    }
+}
+
+def quiet -params .. -shell-script-candidates %{ printf '%s\n' hooks shell profile keys commands } %{
+    rmhooks global update-modeline
+    rmhooks window open-show
+    try %{
+        set window debug %sh{
+            printf %s "$1"
+            shift 2>/dev/null
+            if [ "$1" != "" ]; then
+                printf '|%s' "$@"
+            fi
+        }
+    }
+}
+
+map global user f ': filer<ret>'
