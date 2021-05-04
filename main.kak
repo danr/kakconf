@@ -8,19 +8,19 @@ hook global BufCreate [^*].* %{
     }
 }
 
+decl -hidden str source_dir %sh{dirname "$kak_source"}
+
 def import -params 1 %{
     try %{
-        source %sh{echo ~/code/kakconf/$1.kak}
+        source "~/code/kakconf/%arg{1}.kak"
     }
 }
-
-import krc
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"
 }
 plug andreyorst/plug.kak noload
-# plug andreyorst/fzf.kak
+
 plug occivink/kakoune-vertical-selection
 plug occivink/kakoune-find
 plug occivink/kakoune-phantom-selection
@@ -44,28 +44,16 @@ plug delapouite/kakoune-buffers
 plug ul/kak-lsp do "cargo build --release --locked; cargo install --force --path ."
 set global lsp_cmd "kak-lsp -s %val{session} -c %val{config}/plugins/kak-lsp/kak-lsp.toml"
 
-# plug alexherbo2/connect.kak
-# plug alexherbo2/explore.kak
-
+rmhl global/show-matching
 plug laelath/kakoune-show-matching-insert config %{ addhl global/ ranges show_matching_insert }
 addhl global/ show-matching
 
 plug occivink/kakoune-interactive-itersel
 plug occivink/kakoune-sudo-write
 
-# plug occivink/kakoune-number-comparison
-
-map global user n ': connect-nnn<ret>'
-
-def lint-enabled %{
-    try %{
-        lint-enable
-    }
-}
-
-map global user e ': lint-enabled; lint<ret>'
-map global user n ': lint-enabled; lint-next-error<ret>'
-map global user t ': lint-enabled; lint-previous-error<ret>'
+map global user e ': try lint-enable; lint<ret>'
+map global user n ': try lint-enable; lint-next-message<ret>'
+map global user t ': try lint-enable; lint-previous-message<ret>'
 
 def lsp-win %{
     lsp-enable-window
@@ -73,26 +61,19 @@ def lsp-win %{
     lsp-inline-diagnostics-disable window
 }
 
-# plug occivink/kakoune-gdb
 # plug occivink/kakoune-expand
-# # plug danr/kakoune-easymotion
-# # plug fsub/kakoune-mark
 
-# plug alexherbo2/move-line.kak rc/
-#
-
-
-import find-open
-import commas
-import github
-import marks-submap
-import one-char-replace
+import krc
 import reload-kakrc
+import one-char-replace
 import selections
 import z-submap
-import wip
 import fzf
 import sneak
 import base16base
 import filer
 import tab-at-word-end
+import invert
+import wip
+import find-open
+import commas

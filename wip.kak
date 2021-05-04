@@ -56,15 +56,18 @@ map global normal <a-m>       ': newsel m\;<ret>'
 
 # Select paragraphs (Use <a-i>p and repeat with full-line-ifte?)
 map global normal <a-t> ]p
-map global normal <a-T> }p
 map global normal <a-n> [p
+map global normal <a-T> }p
 map global normal <a-N> {p
+map global normal <a-s-t> }p
+map global normal <a-s-n> {p
 
 # Extend selections left and right
 map global normal <c-s>   gl
 map global normal <a-s> \;Gl
 map global normal <a-S>   Gl
 map global normal <backspace> gi
+map global normal <c-h> gi
 map global normal <a-h> \;Gi
 map global normal <a-H>   Gi
 map global normal <c-a>   gh
@@ -512,9 +515,22 @@ def quiet -params .. -shell-script-candidates %{ printf '%s\n' hooks shell profi
         }
     }
 }
-
 def qc %{quiet commands}
 def qs %{quiet shell}
 def qsc %{quiet shell commands}
 
 map global user f ': filer<ret>'
+
+try %{declare-user-mode block}
+
+map global block w <a-a>p
+map global block v '<a-a>p<a-;>[p'
+map global block W }p
+map global block V '{p'
+
+map global block t 'ghj<a-x>'
+map global block n 'ghk<a-x>'
+map global block T 'GHJ<a-x>'
+map global block N 'GHK<a-x>'
+
+map global normal q ': enter-user-mode -lock block<ret>'

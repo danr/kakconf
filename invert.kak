@@ -1,4 +1,5 @@
-def invert %{
+
+def invert -docstring "select everything that isn't selected" %{
     eval -save-regs slrb %{
         exec -draft -save-regs '' '<a-:>"sZ'
         exec -draft -save-regs '' '<a-:><a-;>h"lZ'
