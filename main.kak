@@ -95,4 +95,4 @@ import fzf
 import sneak
 import base16base
 import filer
-
+import tab-at-word-end

@@ -9,13 +9,8 @@ try %{
 
 map global normal j ': enter-user-mode fzf-kitty<ret>'
 
-try %{
-    decl str rg_types
-}
-set global rg_types '--type-add kak:\*.kak --type json --type py --type hs --type md --type ts --type js --type julia --type kak --type xml --type txt --type toml --type rust'
 map global fzf-kitty F -docstring 'file ~'   %(: fzf-kitty %(krc send edit) %(rg ~ --files)<ret>)
 map global fzf-kitty f -docstring file       %(: fzf-kitty %(krc send edit) %(rg --files)<ret>)
-map global fzf-kitty c -docstring code       %(: fzf-kitty %(krc send edit) 'rg ~ ~/.config ~/config --ignore-file ~/.binignore --files %opt{rg_types}'<ret>)
 map global fzf-kitty d -docstring dir        %(: fzf-kitty %(krc send cd) %(fd -t d)<ret>)
 map global fzf-kitty D -docstring 'dir ~'    %(: fzf-kitty %(krc send cd) %(echo ~; fd -t d . ~)<ret>)
 map global fzf-kitty b -docstring buffer     %(: fzf-kitty %(krc send buffer) %(source ~/code/krc/krc-bash-aliases; buffers)<ret>)
@@ -28,7 +23,9 @@ def fzf-kitty-line %{
             hit="$1"
             file=$(echo "$hit" | cut -f 1 -d:)
             line=$(echo "$hit" | cut -f 2 -d:)
-            krc send edit $file $line
+            if [ "$file" != "" ]; then
+                krc send edit "$file" "$line"
+            fi
         }
         k) %(rg -n .) %(-d: -n 3.. --preview '
             hit={}
@@ -36,12 +33,5 @@ def fzf-kitty-line %{
             line=$(echo "$hit" | cut -f 2 -d:)
             bat $file --highlight-line "$line" --line-range $((line > 10 ? line - 10 : 1)): --color=always
         ')
-}
-
-def unused-fzf-file-from-git-here %{
-    fzf-file %sh{
-        cd $(dirname $kak_buffile)
-        git rev-parse --show-toplevel
-    }
 }
 

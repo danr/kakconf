@@ -22,8 +22,16 @@ def example-with-quoted-selections %{
     }
 }
 
-decl range-specs repl
+def replace-ranges-test %{
+    # also see: https://gist.github.com/Screwtapello/5ff1be32fccf62acd1830aeaf8d7b69d
+    decl range-specs repl
+    rmhl window/repl
+    addhl window/repl replace-ranges repl
+    set window repl %val{timestamp} '18.38,22.6|..' '20.21,22.4|..'
+}
 
-rmhl window/repl
-addhl window/repl replace-ranges repl
-set window repl %val{timestamp} '18.38,22.6|..' '20.21,22.4|..'
+def retain-indent-enable %{
+    # a simple auto indent
+    hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
+}
+

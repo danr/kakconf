@@ -1,7 +1,7 @@
 
 # Reload kakrc and .kak when saving.
 # Adds -override to definitions (unless they seem to be python defs!)
-# Removes shared highlighting
+# Evals provide module directly
 # Idea: remove all grouped hooks?
 
 try %{
@@ -24,8 +24,7 @@ def resource -params 1 %{
     nop %sh{
         sed -i 's/^def \([^:]*\)$/def -override \1/' $kak_opt_reload_file
         sed -i 's/^define-command /def -override /' $kak_opt_reload_file
-        sed -i 's/^provide-module /def -hidden -override /' $kak_opt_reload_file
-        sed -i 's/require-module //' $kak_opt_reload_file
+        sed -i 's/^provide-module \w\+ /eval /' $kak_opt_reload_file
     }
     eval %sh{
         echo echo -debug %file{$kak_opt_reload_file}

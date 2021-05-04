@@ -16,16 +16,6 @@ hook -group kakrc global WinSetOption filetype=(java|type)script %{
     set window indentwidth 2
 }
 
-def smarttab-enable %{
-  hook -group smarttab window InsertChar \t %{ exec -draft -itersel @ }
-  hook -group smarttab window InsertDelete ' ' %{
-    eval -draft -itersel %{ try %{
-      exec 'hGh' "s\A(( {%opt{indentwidth}})*) *\z<ret>" '"1R'
-    }}
-  }
-}
-def smarttab-disable %{ rmhooks window smarttab }
-
 # Dvorak movement, dodging empty lines
 import nonempty-lines
 map global normal t 'j: while-empty j<ret>'
@@ -92,9 +82,6 @@ map global normal G     N978vh
 map global normal <a-g> <a-n>978vh
 map global normal <a-G> <a-N>978vh
 
-# Marks submap
-map global normal j ': marks<ret>'
-
 # J a'la vim
 def J %{exec -itersel <A-J><a-_>c<space><esc><space>vm }
 map global normal J ': J<ret>'
@@ -116,8 +103,6 @@ map global normal -- - s
 map global normal L S
 map global normal l <A-s>
 
-#map global user   a :echo'@'<ret>
-#:select-all-focus-closest<ret>
 map global normal @ ': select-all-focus-closest<ret>'
 map global normal _ ': exec s<ret><ret>'
 
@@ -324,7 +309,7 @@ hook -group reload-xres global BufWritePost .*Xresources %{
 }
 
 # Reload sxhkd upon saving it
-rmhooks global reload_sxhkd
+rmhooks global reload-sxhkd
 hook -group reload-sxhkd global BufWritePost .*sxhkd.* %{
   nop %sh{ pkill -USR1 -x sxhkd }
   echo pkill -USR1 -x sxhkd
@@ -333,33 +318,20 @@ hook -group reload-sxhkd global BufWritePost .*sxhkd.* %{
 hook -group kakrc global BufCreate .*sxhkd.* %{ set buffer filetype sh }
 hook -group kakrc global BufCreate .*bspwm.* %{ set buffer filetype sh }
 
-
-# Window setup
-def my-window-setup %{
-    smarttab-enable
-
-    # map window insert <tab> '<a-;>: contextual-tab<ret>'
+rmhooks global smarttab
+def delete-tab %{exec 'hGh' "s\A(( {%opt{indentwidth}})*) *\z<ret>" '"1R'}
+hook -group smarttab global InsertDelete ' ' %{
+    eval -draft -itersel %{try delete-tab}
 }
 
 hook global -group kakrc WinResize .* %{
     echo "%val{window_height}:%val{window_width}"
 }
 
-# auto indent
-def retain-indent-enable %{
-    hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
-}
-
-hook -group kakrc global WinSetOption ^filetype=markdown$ %{
-    set window disabled_hooks copyindent
-}
-
 # Auto expand tabs into spaces
 hook -group expandtabs global InsertChar \t %{ exec -draft -itersel x@ }
 
 set global grepcmd 'rg -n'
-
-hook global -group kakrc WinCreate .* my-window-setup
 
 hook global -group kakrc BufCreate .*(bashrc|xinitrc).* %{
 set buffer filetype sh
@@ -371,46 +343,19 @@ hook global -group kakrc BufCreate .*(Makefile).* %{
 
 set global completers filename
 
-def ifte-at-word-end -params 2 %{
-    try %{
-        exec -draft '<esc><space>;H<a-k>\S\s<ret>'
-        eval %arg{1}
-    } catch %{
-        eval %arg{2}
-    }
-}
-
 map global insert <a-w> <c-x><c-w>
 map global insert <a-h> '<a-;>: lsp-signature-help<ret>'
-
-
-def contextual-tab -docstring "To be bound in insert mode" %{
-    ifte-at-word-end %{
-        # Complete if current char is whitespace, and previous is not
-        echo completing...
-        eval -draft -no-hooks %{exec b; lsp-complete; echo ''}
-    } %{
-        # Otherwise just insert a tab
-        echo -debug insert a tab
-        exec <tab>
-    }
-}
 
 hook global -group kakrc BufCreate .*kak.* %{
     set -add buffer extra_word_chars -
 }
 
-hook global -group kakrc InsertCompletionShow .* %{
-    echo ''
-    map window insert <tab>   <c-n>
-    map window insert <s-tab> <c-p>
-}
-hook global -group kakrc InsertCompletionHide .* %{
-    map window insert <tab>   <tab>
-    map window insert <s-tab> <s-tab>
-}
-
 hook global -group kakrc BufOpenFifo '\*grep\*' %{ map -docstring grep-next buffer user n ':grep-next<ret>' }
+
+hook -group kakrc global WinSetOption filetype=man %{
+    unmap window normal <ret> ': man-jump<ret>'
+    map window user <ret> ': man-jump<ret>'
+}
 
 hook global -group kakrc WinSetOption filetype=(c|cpp) %{
     clang-enable-autocomplete
@@ -438,8 +383,10 @@ hook -group kakrc global BufSetOption filetype=pug %{
 }
 
 hook global -group kakrc WinSetOption filetype=python %{
-    set buffer lintcmd 'mypy --show-column-numbers'
-    #lint-enable
+    set window lintcmd 'mypy --show-column-numbers'
+    jedi-enable-autocomplete
+    set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
+    # lint-enable
 }
 
 def ide %{
@@ -468,38 +415,19 @@ map -docstring '<a-?>(?i)' global user '<a-?>' <a-?>(?i)
 
 map -docstring 'merge sels' global user M <a-_>
 
-# hook -group kakrc global NormalIdle .* update_height
-# hook -group kakrc global InsertChar [\n] update_height
-#
-
 decl str modeline_info  ''
 
-def dont -params .. %{}
-
-def bufdebug %{
-    set buffer debug hooks|shell|profile|keys|commands
+rmhooks global update-modeline
+hook -group update-modeline global WinCreate .* %{
+    hook -group update-modeline window WinDisplay .* %{try update_modeline_info}
+    hook -group update-modeline window PromptIdle .* %{try update_modeline_info}
+    hook -group update-modeline window InsertIdle .* %{try update_modeline_info}
+    hook -group update-modeline window NormalIdle .* %{try update_modeline_info}
+    hook -group update-modeline window NormalKey [jknJKN] %{try update_modeline_info}
 }
 
-rmhooks global update-modeline
-hook -group update-modeline global WinDisplay .* update_modeline_info
-hook -group update-modeline global PromptIdle .* update_modeline_info
-hook -group update-modeline global InsertIdle .* update_modeline_info
-hook -group update-modeline global NormalIdle .* update_modeline_info
-hook -group update-modeline global NormalKey [jknJKN] update_modeline_info
-
 def update_modeline_info %{
-    try %{
-        eval %sh{
-        echo -n "set window modeline_info '"
-        [[ ${kak_buf_line_count:-0} != 0 ]] && \
-        printf "%3d%% |" "$((100 * ($kak_cursor_line - 1) / $kak_buf_line_count))"
-
-        [[ $kak_client != unnamed0 ]] && \
-        echo -n " $kak_client |"
-
-        echo "'"
-        }
-    }
+    set window modeline_info %sh{printf '%3d%% |' $((kak_buf_line_count > 1 ? 100 * ($kak_cursor_line - 1) / ($kak_buf_line_count - 1) : 0))}
 }
 
 set global modelinefmt %{
@@ -572,7 +500,7 @@ def wc -params .. %{
 }
 
 def quiet -params .. -shell-script-candidates %{ printf '%s\n' hooks shell profile keys commands } %{
-    rmhooks global update-modeline
+    rmhooks window update-modeline
     rmhooks window open-show
     try %{
         set window debug %sh{
@@ -584,5 +512,9 @@ def quiet -params .. -shell-script-candidates %{ printf '%s\n' hooks shell profi
         }
     }
 }
+
+def qc %{quiet commands}
+def qs %{quiet shell}
+def qsc %{quiet shell commands}
 
 map global user f ': filer<ret>'
