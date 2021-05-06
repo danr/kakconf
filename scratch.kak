@@ -35,3 +35,23 @@ def retain-indent-enable %{
     hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
 }
 
+def sh -params .. %{
+    eval eval "%%sh{""$@"" # %sh{printf '%s ' ""$@"" | grep -o 'kak_\w\+' | tr '\n' ' '}}"
+}
+
+def example %{
+    sh python -c %{if 1:
+        import os, sys, shlex, json
+        env = os.environ.get
+
+        def quote(s):
+            return "'" + s.replace("'", "''") + "'"
+
+        print('info --', quote(json.dumps({
+            'buffile': env('kak_buffile'),
+            'bufname': env('kak_bufname'),
+            'argv': sys.argv,
+            'selections': shlex.split(env('kak_quoted_selections'))
+        }, indent=2)))
+    } %val{selections}
+}
