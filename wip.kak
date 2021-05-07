@@ -385,11 +385,16 @@ hook -group kakrc global BufSetOption filetype=pug %{
   set buffer disabled_hooks (pug-hooks|pug-indent)
 }
 
-hook global -group kakrc WinSetOption filetype=python %{
+hook global -group kakrc WinSetOption filetype=python pysetup
+
+def pysetup -hidden %{
     set window lintcmd 'mypy --show-column-numbers'
     jedi-enable-autocomplete
     set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
     # lint-enable
+    map window user . ': jedi-goto<ret>'
+    map window user b ': i3-new-up; jedi-goto<ret>'
+    map window user i ': jedi-info<ret>'
 }
 
 def ide %{
