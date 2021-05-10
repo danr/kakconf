@@ -7,7 +7,7 @@
 decl -hidden str reload_file
 
 def resource -params 1 %{
-    set global reload_file %sh{ mktemp /tmp/kak-source.XXXXXX }
+    set global reload_file './.reload.kak'
     eval -draft %{
         exec \%
         echo -to-file %opt{reload_file} %val{selection}
