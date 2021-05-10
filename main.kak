@@ -78,3 +78,4 @@ import wip
 import find-open
 import commas
 import modeline
+import surround
