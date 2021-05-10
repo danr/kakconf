@@ -22,7 +22,7 @@ map global fzf-kitty h -docstring 'file ~'    %(: fzf-kitty %(krc send edit) %(r
 map global fzf-kitty g -docstring 'goto line' %(: fzf-kitty-line-goto %(cat ~/.mru | xargs rg -n . .)<ret>)
 map global fzf-kitty c -docstring 'copy line' %(: fzf-kitty-line-copy %(cat ~/.mru | xargs rg -n . .)<ret>)
 
-map global fzf-kitty d -docstring 'dir ~'     %(: fzf-kitty %(krc send cd) %(echo ~; fd -t d . ~)<ret>)
+map global fzf-kitty d -docstring 'dir ~'     %(: fzf-kitty %(krc send cd) %(fd -t d . ~)<ret>)
 map global fzf-kitty b -docstring buffer      %(: fzf-kitty %(krc send buffer) %(source ~/code/krc/krc-bash-aliases; buffers)<ret>)
 
 def fzf-kitty-line-goto -params 1 %{

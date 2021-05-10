@@ -51,9 +51,9 @@ addhl global/ show-matching
 plug occivink/kakoune-interactive-itersel
 plug occivink/kakoune-sudo-write
 
-map global user e ': try lint-enable; lint<ret>'
-map global user n ': try lint-enable; lint-next-message<ret>'
-map global user t ': try lint-enable; lint-previous-message<ret>'
+map -docstring 'lint'      global user e ': try lint-enable; lint<ret>'
+map -docstring 'lint next' global user n ': try lint-enable; lint-next-message<ret>'
+map -docstring 'lint prev' global user t ': try lint-enable; lint-previous-message<ret>'
 
 def lsp-win %{
     lsp-enable-window

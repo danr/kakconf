@@ -26,7 +26,6 @@ def -hidden find-open %{
         try %{ exec-draft [{ \; <a-Z>> ; nop extra } close for the %{..} block }
         try %{ exec-draft [[ \; <a-Z>> }
         try %{ exec-draft [( \; <a-Z>> }
-        try %{ exec-draft [< \; <a-Z>> }
         try %{ find-quote-start \' <a-Z>> }
         try %{ find-quote-start \" <a-Z>> }
         try %{ find-quote-start  ` <a-Z>> }
@@ -36,7 +35,6 @@ def -hidden find-open %{
         try %{ exec <a-k>\Q{ <ret> ; set window closing_char  } ; set window opening_desc %val{selection_desc}}
         try %{ exec <a-k>\Q[ <ret> ; set window closing_char  ] ; set window opening_desc %val{selection_desc}}
         try %{ exec <a-k>\Q( <ret> ; set window closing_char  ) ; set window opening_desc %val{selection_desc}}
-        try %{ exec <a-k>\Q< <ret> ; set window closing_char  > ; set window opening_desc %val{selection_desc}}
         try %{ exec <a-k>\Q' <ret> ; set window closing_char \' ; set window opening_desc %val{selection_desc}}
         try %{ exec <a-k>\Q" <ret> ; set window closing_char \" ; set window opening_desc %val{selection_desc}}
         try %{ exec <a-k>\Q` <ret> ; set window closing_char  ` ; set window opening_desc %val{selection_desc}}

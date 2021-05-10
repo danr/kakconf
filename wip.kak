@@ -1,10 +1,5 @@
 map global normal ] ': expand<ret>'
 
-map global normal ( ': move-line-above %val{count}<ret>'
-map global normal ) ': move-line-below %val{count}<ret>'
-
-map global user m ': mark-word<ret>'
-
 map global normal ^ ': vertical-selection-up-and-down<ret>'
 
 hook -group kakrc global BufSetOption filetype=(java|type)script %{
@@ -88,7 +83,6 @@ map global normal <a-G> <a-N>978vh
 # J a'la vim
 def J %{exec -itersel <A-J><a-_>c<space><esc><space>vm }
 map global normal J ': J<ret>'
-map -docstring join global user   j <A-J>
 
 # Overwrite a'la vim R
 import overwrite
@@ -109,11 +103,9 @@ map global normal l <A-s>
 map global normal @ ': select-all-focus-closest<ret>'
 map global normal _ ': exec s<ret><ret>'
 
-#map -docstring %{select all} global user   a :select-all-focus-closest<ret>
-
 # Keep selections
-map -docstring %{keep} global user k <a-k>
-map -docstring %{keep not} global user K <a-K>
+map -docstring '<a-k>' global user k <a-k>
+map -docstring '<a-K>' global user K <a-K>
 
 def old_X %{
     try %{
@@ -186,18 +178,16 @@ def selinfo %{
 #hook -group kakrc global NormalKey '^(<a-[:;]>|<space>|;)$' selinfo
 
 # Register
-map -docstring register global user r '"'
+map -docstring '(") register' global user "'" '"'
+map -docstring '(R) paste and replace' global user r R
 
 # Paste and replace
 map global normal <c-r> R
 
 # Xclipboard
-map -docstring 'xser paste'    global user P %{<a-!>xclip -o<ret>}
+map -docstring 'xsel paste'    global user P %{<a-!>xclip -o<ret>}
 map -docstring 'xsel Paste'    global user p %{!xclip -o<ret>}
 map -docstring 'xsel replace'  global user R %{: reg w "%sh{xclip -o}"<ret>"wR}
-map -docstring 'xcopy bufname' global user y %{: xcopy %val{bufname}<ret>}
-map -docstring 'xcopy buffile' global user Y %{: xcopy %val{buffile}<ret>}
-
 
 def xcopy -params 0..1 %{eval %sh{
   if [ -z "$1" ]; then
@@ -225,9 +215,8 @@ map global normal y 'y: xcopy<ret>'
 # Execute current selection(s)
 map -docstring eval global user x %{: eval -itersel %val{selection}<ret>}
 
-# Write and close buffer
+# Write buffer
 map -docstring write  global user w ': w<ret>'
-map -docstring bufdel global user d %{ : delete-buffer<ret>: exec ga<ret> }
 
 # Comment line
 map global normal '#' ': comment-line<ret>'
@@ -265,8 +254,6 @@ def setf -params 1 %{set buffer filetype %arg{1}}
 def auinfo %{set -add window autoinfo normal}
 def cd-here %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel 2>/dev/null || echo $PWD}}
 alias global cd! cd-here
-
-map -docstring pwd global user ` %{: echo %val{client_env_PWD}<ret>}
 
 # Auto-mkdir when saving buffer to file, from alexherbo2
 hook global -group kakrc BufWritePre .* %{ nop %sh{
@@ -392,9 +379,9 @@ def pysetup -hidden %{
     jedi-enable-autocomplete
     set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
     # lint-enable
-    map window user . ': jedi-goto<ret>'
-    map window user b ': i3-new-up; jedi-goto<ret>'
-    map window user i ': jedi-info<ret>'
+    map -docstring 'jedi goto'    window user . ': jedi-goto<ret>'
+    map -docstring 'jedi goto bg' window user b ': i3-new-up; jedi-goto<ret>'
+    map -docstring 'jedi info'    window user i ': jedi-info<ret>'
 }
 
 def ide %{
@@ -416,10 +403,10 @@ try %{
     addhl shared/kakrc/code/b regex \b(def|eval|exec|set|reg|decl|addhl)\b 0:keyword
 }
 
-map -docstring '/(?i)'     global user '/'     /(?i)
-map -docstring '<a-/>(?i)' global user '<a-/>' <a-/>(?i)
-map -docstring '?(?i)'     global user '?'     ?(?i)
-map -docstring '<a-?>(?i)' global user '<a-?>' <a-?>(?i)
+map -docstring '/(?i)' global user '/'     /(?i)
+map -docstring '?(?i)' global user '?'     ?(?i)
+map -docstring '/(?i) reverse' global user '<a-/>' <a-/>(?i)
+map -docstring '?(?i) reverse' global user '<a-?>' <a-?>(?i)
 
 map -docstring 'merge sels' global user M <a-_>
 
@@ -504,7 +491,7 @@ def qc %{quiet commands}
 def qs %{quiet shell}
 def qsc %{quiet shell commands}
 
-map global user f ': filer<ret>'
+map -docstring 'filer' global user f ': filer<ret>'
 
 try %{declare-user-mode block}
 
