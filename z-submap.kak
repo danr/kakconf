@@ -3,20 +3,20 @@ try %{
     declare-user-mode z
 }
 
-map global z t ': exec vt<ret>'
-map global z c ': exec vc<ret>'
-map global z b ': exec vb<ret>'
+map -docstring i3-right global z r ': i3-new-right<ret>'
+map -docstring i3-down  global z R ': i3-new-down<ret>'
 
-map global z r ': i3-new-right<ret>'
-map global z R ': i3-new-down<ret>'
+map -docstring vt global z t ': exec vt<ret>'
+map -docstring vc global z c ': exec vc<ret>'
+map -docstring vb global z b ': exec vb<ret>'
 
-map global z g ': exec gg<ret>'
-map global z G ': exec Gg<ret>'
-map global z n ': exec ge<ret>'
-map global z N ': exec Ge<ret>'
+map -docstring gg global z g ': exec gg<ret>'
+map -docstring Gg global z G ': exec Gg<ret>'
+map -docstring ge global z n ': exec ge<ret>'
+map -docstring Ge global z N ': exec Ge<ret>'
 
-map global z j ': prompt %{line: } %{exec %val{text} g}<ret>'
-map global z J ': prompt %{line: } %{exec %val{text} G}<ret>'
+map -docstring '#g' global z j ': prompt %{line: } %{exec %val{text} g}<ret>'
+map -docstring '#G' global z J ': prompt %{line: } %{exec %val{text} G}<ret>'
 
 map global normal z ': enter-user-mode z<ret>'
 
