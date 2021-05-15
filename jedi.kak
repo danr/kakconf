@@ -6,9 +6,7 @@ decl -hidden str jedi_source %val{source}
 
 provide-module jedi %{
 
-eval %sh{
-    python $(dirname "$kak_opt_jedi_source")/jedikak.py init
-}
+eval %sh{ python $(dirname "$kak_opt_jedi_source")/jedikak.py init }
 
 define-command jedi -params 1.. -hidden %{
     eval -save-regs b %{
@@ -21,8 +19,6 @@ declare-option -docstring "colon separated list of path added to `python`'s $PYT
     str jedi_python_path
 
 declare-option -hidden completions jedi_completions
-declare-option -hidden str jedi_info
-declare-option -hidden str jedi_last_name
 
 define-command jedi-complete -docstring "Complete the current selection" %{
     jedi complete

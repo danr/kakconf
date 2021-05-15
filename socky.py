@@ -1,8 +1,6 @@
 
 import os, sys, glob, socket, shlex, re
 
-import pandas as pd
-
 def quote(*args):
     c = "'"
     return " ".join(
@@ -26,19 +24,21 @@ def serve(arg_string='%arg{@}', mode='sync'):
                     decl -hidden str NAME_arg_string ""
                 }
                 def NAME -override -params .. %{
-                    eval echo -quoting shell -to-file /tmp/NAME-arg %opt{NAME_arg_string}
+                    eval echo -quoting shell -to-file "/tmp/NAME.%val{session}.input" %opt{NAME_arg_string}
                     eval %sh{
                         mtime=$(stat -c %Y FILEPATH)
-                        sockfile="/tmp/NAME-$mtime.sock"
+                        sockfile="/tmp/NAME.$kak_session.$mtime.sock"
+                        sockglob="/tmp/NAME.$kak_session.*.sock"
+                        logfile="/tmp/NAME.$kak_session.log"
                         init () {
                             printf 'init\0' | socat STDIO "UNIX-CONNECT:$sockfile"
                             printf '\n%s\n' "echo NAME ready"
-                            printf '%s\n' "follow /tmp/NAME.log"
+                            printf '%s\n' "tail $logfile"
                             printf '%s\n' "NAME %arg{@}"
                         }
                         if test ! -S "$sockfile"; then
                             ( {
-                                python FILEPATH serve "$sockfile" 2>&1 | tee -a /tmp/NAME.log
+                                python -u FILEPATH serve "$sockfile" "$sockglob" 2>&1 | tee -a "$logfile"
                             } & ) >/dev/null 2>&1 </dev/null
                             for i in {1..250}; do
                                 sleep 0.01
@@ -53,7 +53,7 @@ def serve(arg_string='%arg{@}', mode='sync'):
                         elif test "$kak_opt_NAME_arg_string" = ""; then
                             init
                         else
-                            input=$(cat /tmp/NAME-arg)
+                            input=$(cat "/tmp/NAME.$kak_session.input")
                             if test MODE = async; then
                                 ( {
                                     printf 'call %s\0' "$input" | socat -t300 STDIO "UNIX-CONNECT:$sockfile" | kak -p "$kak_session"
@@ -70,8 +70,10 @@ def serve(arg_string='%arg{@}', mode='sync'):
             )
 
         elif sys.argv[1:2] == ['serve']:
+            sockfile = sys.argv[2]
+            sockglob = sys.argv[3]
 
-            for old_sockfile in glob.glob(f'/tmp/{name}-*.sock'):
+            for old_sockfile in glob.glob(sockglob):
                 print('sending to', old_sockfile)
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 try:
@@ -81,7 +83,6 @@ def serve(arg_string='%arg{@}', mode='sync'):
                 except:
                     os.remove(old_sockfile)
 
-            sockfile = sys.argv[2]
             s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             s.bind(sockfile)
             s.listen()
@@ -115,7 +116,6 @@ def serve(arg_string='%arg{@}', mode='sync'):
                             reply = res
                         else:
                             reply = '\n'.join(res)
-                        print('reply:', reply)
                     except:
                         import traceback as tb
                         import reprlib

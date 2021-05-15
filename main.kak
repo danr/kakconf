@@ -83,5 +83,6 @@ import commas
 import modeline
 import surround
 import jedi
+import parso
 
 plug caksoylar/kakoune-smooth-scroll

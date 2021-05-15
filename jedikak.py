@@ -3,8 +3,8 @@ from socky import quote
 
 pipe_escape = lambda s: s.replace("|", "\\|")
 
-@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %val{window_height} %reg{b} %opt{jedi_info} %opt{jedi_last_name} %arg{@}', mode='async')
-def jedi_impl(buffile, client, timestamp, line, column, window_height, code, info_str, last_name, *args):
+@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %val{window_height} %reg{b} %arg{@}', mode='async')
+def jedi_impl(buffile, client, timestamp, line, column, window_height, code, *args):
     line   = int(line)
     column = int(column)
     window_height = int(window_height)
@@ -20,8 +20,6 @@ def jedi_impl(buffile, client, timestamp, line, column, window_height, code, inf
         header = str(line) + "." + str(column) + "@" + timestamp
         cmds += [
             quote("echo", "completed"),
-            quote("set-option", "buffer=" + buffile, "jedi_info", "{}"),
-            quote("set-option", "buffer=" + buffile, "jedi_last_name", ""),
             quote("set-option", "buffer=" + buffile, "jedi_completions", header, *completions),
         ]
     elif args[0] == "completion-info-request":
