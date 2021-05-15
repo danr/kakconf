@@ -2,25 +2,19 @@ hook -once global BufSetOption filetype=python %{
     require-module jedi
 }
 
+decl -hidden str jedi_source %val{source}
+
 provide-module jedi %{
 
-def jedi-log-errfile -params 1 %{
-    nop %sh{
-        cat "$1" >&2
-        rm "$1"
-    }
+eval %sh{
+    python $(dirname "$kak_opt_jedi_source")/jedikak.py init
 }
 
-def jedi-call-python -params .. %{
-    eval eval "%%sh{
-        ( {
-            errfile=$(mktemp)
-            python ""$@"" 2> ""$errfile"" | kak -p ""$kak_session""
-            printf %%s ""jedi-log-errfile $errfile"" | kak -p ""$kak_session""
-        } & ) >/dev/null 2>&1 </dev/null
-        exit $?
-        %sh{grep -o 'kak_\w\+' ""$1""}
-    }"
+define-command jedi -params 1.. -hidden %{
+    eval -save-regs b %{
+        exec -draft '%"by'
+        jedi_impl %arg{@}
+    }
 }
 
 declare-option -docstring "colon separated list of path added to `python`'s $PYTHONPATH environment variable" \
@@ -31,24 +25,15 @@ declare-option -hidden str jedi_info
 declare-option -hidden str jedi_last_name
 
 define-command jedi-complete -docstring "Complete the current selection" %{
-    jedi-impl complete
+    jedi complete
 }
 
-define-command jedi-goto -docstring "todo" %{
-    jedi-impl goto
+define-command jedi-goto -docstring "goto" %{
+    jedi goto
 }
 
-define-command jedi-info -docstring "todo" %{
-    jedi-impl info
-}
-
-decl -hidden str jedi_source_dir %sh{dirname "$kak_source"}
-
-define-command jedi-impl -params 1.. -hidden %{
-    eval -save-regs b %{
-        exec -draft '%"by'
-        jedi-call-python "%opt{jedi_source_dir}/jedikak.py" %arg{@}
-    }
+define-command jedi-info -docstring "info" %{
+    jedi info
 }
 
 define-command jedi-enable-autocomplete -docstring "Add jedi completion candidates to the completer" %{
@@ -56,7 +41,7 @@ define-command jedi-enable-autocomplete -docstring "Add jedi completion candidat
     hook window -group jedi-autocomplete InsertIdle .* %{ try %{
         execute-keys -draft <a-h><a-k>\..\z<ret>
         echo 'completing...'
-        jedi-complete
+        jedi complete
     } }
     alias window complete jedi-complete
 }
