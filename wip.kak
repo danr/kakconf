@@ -506,3 +506,55 @@ map global block T 'GHJ<a-x>'
 map global block N 'GHK<a-x>'
 
 map global normal q ': enter-user-mode -lock block<ret>'
+
+# https://github.com/Delapouite/kakoune-select-view/blob/master/select-view.kak
+# to restore the value afterwards
+declare-option -hidden str _scrolloff
+
+define-command select-view -docstring 'select visible part of buffer' %{
+  set-option window _scrolloff %opt{scrolloff}
+  set-option window scrolloff 0,0
+
+  execute-keys gtGbGl
+
+  hook window -once NormalKey .* %{
+    set-option window scrolloff %opt{_scrolloff}
+  }
+}
+
+# Suggested mapping
+
+map global user v ': select-view<ret>' -docstring 'select view'
+
+# https://github.com/shachaf/kak/blob/master/kakrc
+def selection-hull \
+  -docstring 'The smallest single selection containing every selection.' \
+  %{
+  eval -save-regs 'ab' %{
+    exec '"aZ' '<space>"bZ'
+    try %{ exec '"az<a-space>' }
+    exec -itersel '"b<a-Z>u'
+    exec '"bz'
+    echo
+  }
+}
+
+def align-cursors-left \
+  -docstring 'set all cursor (and anchor) columns to the column of the leftmost cursor' \
+  %{ eval %sh{
+  col=$(echo "$kak_selections_desc" | tr ' ' '\n' | sed 's/^[0-9]\+\.[0-9]\+,[0-9]\+\.//' | sort -n | head -n1)
+  sels=$(echo "$kak_selections_desc" | sed "s/\.[0-9]\+/.$col/g")
+  echo "select $sels"
+}}
+
+def git-show-blamed-commit %{
+  #git show %sh{git blame -L "$kak_cursor_line,$kak_cursor_line" "$kak_buffile" | awk '{print $1}'}
+  git show %sh{git blame -L "$kak_cursor_line,$kak_cursor_line" "$kak_buffile" | awk '{sub(/^\^/, ""); print $1;}'}
+}
+def git-log-lines %{
+  git log -L %sh{
+    anchor="${kak_selection_desc%,*}"
+    anchor_line="${anchor%.*}"
+    echo "$anchor_line,$kak_cursor_line:$kak_buffile"
+  }
+}

@@ -39,8 +39,8 @@ map global normal K     ': forward-extend  sneak-standard<ret>'
 map global normal <a-k> ': backward        sneak-standard<ret>'
 map global normal <a-K> ': backward-extend sneak-standard<ret>'
 
-map global user s     ': forward           sneak-word<ret>'
-map global user S     ': forward-extend    sneak-word<ret>'
-map global user <a-s> ': backward          sneak-word<ret>'
-map global user <a-S> ': backward-extend   sneak-word<ret>'
+map -docstring 'sneak'                global user s     ': forward           sneak-word<ret>'
+map -docstring 'sneak extend'         global user S     ': forward-extend    sneak-word<ret>'
+map -docstring 'sneak reverse'        global user <a-s> ': backward          sneak-word<ret>'
+map -docstring 'sneak reverse extend' global user <a-S> ': backward-extend   sneak-word<ret>'
 

@@ -3,7 +3,7 @@ try %{
     declare-user-mode surround
 }
 
-map global user u ': enter-user-mode surround<ret>'
+map -docstring surround global user u ': enter-user-mode surround<ret>'
 
 def surround-add -params 2 %{
     exec i %arg{1} <esc> H a %arg{2} <esc>

@@ -2,7 +2,7 @@
 def fzf-kitty -params 2..3 %{
     connect kitty-terminal bash -c "
         %arg{1} $(
-            %arg{2} |
+            %arg{2} 2>/dev/null |
             fzf --height=100%% --preview-window=down,40%% --preview '
                 test -d {} && ls --color=always -lh {} || bat --color=always {}' %arg{3}
         )

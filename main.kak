@@ -41,8 +41,10 @@ map global insert <a-F> "<esc>: phantom-selection-iterate-prev<ret>i"
 plug delapouite/kakoune-livedown
 plug delapouite/kakoune-i3
 plug delapouite/kakoune-buffers
-plug ul/kak-lsp do "cargo build --release --locked; cargo install --force --path ."
-set global lsp_cmd "kak-lsp -s %val{session} -c %val{config}/plugins/kak-lsp/kak-lsp.toml"
+
+# plug ul/kak-lsp do "cargo build --release --locked; cargo install --force --path ."
+# set global lsp_cmd "kak-lsp -s %val{session}"
+eval %sh{kak-lsp -s "$kak_session" --kakoune -c /home/dan/code/kakconf/kak-lsp.toml}
 
 rmhl global/show-matching
 plug laelath/kakoune-show-matching-insert config %{ addhl global/ ranges show_matching_insert }
@@ -80,3 +82,5 @@ import commas
 import modeline
 import surround
 import jedi
+
+plug caksoylar/kakoune-smooth-scroll

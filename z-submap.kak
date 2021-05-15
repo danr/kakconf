@@ -4,7 +4,8 @@ try %{
 }
 
 map -docstring i3-right global z r ': i3-new-right<ret>'
-map -docstring i3-down  global z R ': i3-new-down<ret>'
+map -docstring i3-right global z v ': i3-new-right<ret>'
+map -docstring i3-down  global z w ': i3-new-down<ret>'
 
 map -docstring vt global z t ': exec vt<ret>'
 map -docstring vc global z c ': exec vc<ret>'
@@ -15,8 +16,8 @@ map -docstring Gg global z G ': exec Gg<ret>'
 map -docstring ge global z n ': exec ge<ret>'
 map -docstring Ge global z N ': exec Ge<ret>'
 
-map -docstring '#g' global z j ': prompt %{line: } %{exec %val{text} g}<ret>'
-map -docstring '#G' global z J ': prompt %{line: } %{exec %val{text} G}<ret>'
+map -docstring '<line:> g' global z z ': prompt %{line: } %{exec %val{text} g}<ret>'
+map -docstring '<line:> G' global z Z ': prompt %{line: } %{exec %val{text} G}<ret>'
 
 map global normal z ': enter-user-mode z<ret>'
 
