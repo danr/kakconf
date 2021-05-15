@@ -33,6 +33,7 @@ def serve(arg_string='%arg{@}', mode='sync'):
                         init () {
                             printf 'init\0' | socat STDIO "UNIX-CONNECT:$sockfile"
                             printf '\n%s\n' "echo NAME ready"
+                            printf '%s\n' "follow /tmp/NAME.log"
                             printf '%s\n' "NAME %arg{@}"
                         }
                         if test ! -S "$sockfile"; then

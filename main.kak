@@ -65,6 +65,7 @@ def lsp-win %{
 
 # plug occivink/kakoune-expand
 
+import follow
 import krc
 import reload-kakrc
 import one-char-replace
