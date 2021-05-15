@@ -522,6 +522,14 @@ define-command select-view -docstring 'select visible part of buffer' %{
   }
 }
 
+def toggle-wrap %{
+    try %{
+        addhl global/w wrap -marker '┋'
+    } catch %{
+        rmhl global/w
+    }
+}
+
 # Suggested mapping
 
 map global user v ': select-view<ret>' -docstring 'select view'
