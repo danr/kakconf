@@ -3,10 +3,11 @@ from socky import quote
 
 pipe_escape = lambda s: s.replace("|", "\\|")
 
-@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %reg{b} %opt{jedi_info} %opt{jedi_last_name} %arg{@}', mode='async')
-def jedi_impl(buffile, client, timestamp, line, column, code, info_str, last_name, *args):
+@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %val{window_height} %reg{b} %opt{jedi_info} %opt{jedi_last_name} %arg{@}', mode='async')
+def jedi_impl(buffile, client, timestamp, line, column, window_height, code, info_str, last_name, *args):
     line   = int(line)
     column = int(column)
+    window_height = int(window_height)
     cmds = []
     if args[0] == "complete":
         script = jedi.Script(code=code, path=buffile)
@@ -28,7 +29,13 @@ def jedi_impl(buffile, client, timestamp, line, column, code, info_str, last_nam
         names = script.goto(line=line, column=column-1)
         if names:
             import textwrap
-            doc = "\n".join(names[0].docstring().splitlines()[:9])
+            doc = names[0].docstring()
+            doc = '\n\n'.join(
+                textwrap.fill(par, subsequent_indent='' if i else '    ')
+                if re.match('^.{80}', par) else par
+                for i, par in enumerate(doc.split('\n\n'))
+            )
+            doc = '\n'.join(doc.splitlines()[:max(9, window_height - 9)])
         else:
             doc = ""
         cmds += ["info -- " + quote(doc)]
