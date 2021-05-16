@@ -3,14 +3,14 @@ from socky import quote
 
 pipe_escape = lambda s: s.replace("|", "\\|")
 
-@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %val{window_height} %reg{b} %arg{@}', mode='async')
-def jedi_impl(buffile, client, timestamp, line, column, window_height, code, *args):
+@socky.serve('%val{buffile} %val{client} %val{timestamp} %val{cursor_line} %val{cursor_column} %val{window_height} %val{bufstr} %arg{@}', mode='async')
+def jedi(buffile, client, timestamp, line, column, window_height, bufstr, *args):
     line   = int(line)
     column = int(column)
     window_height = int(window_height)
     cmds = []
     if args[0] == "complete":
-        script = jedi.Script(code=code, path=buffile)
+        script = jedi.Script(code=bufstr, path=buffile)
         completions = (
             pipe_escape(c.name) +
             "|" + pipe_escape(quote("evaluate-commands", "jedi completion-info-request")) +
@@ -23,7 +23,7 @@ def jedi_impl(buffile, client, timestamp, line, column, window_height, code, *ar
             quote("set-option", "buffer=" + buffile, "jedi_completions", header, *completions),
         ]
     elif args[0] == "completion-info-request":
-        script = jedi.Script(code=code, path=buffile)
+        script = jedi.Script(code=bufstr, path=buffile)
         names = script.goto(line=line, column=column-1)
         if names:
             import textwrap
@@ -38,14 +38,14 @@ def jedi_impl(buffile, client, timestamp, line, column, window_height, code, *ar
             doc = ""
         cmds += ["info -- " + quote(doc)]
     elif args[0] == "info":
-        script = jedi.Script(code=code, path=buffile)
+        script = jedi.Script(code=bufstr, path=buffile)
         names = script.goto(line=line, column=column-1)
         if names:
             cmds += ["info -- " + quote(names[0].docstring())]
         else:
             cmds += []
     elif args[0] == "goto":
-        script = jedi.Script(code=code, path=buffile)
+        script = jedi.Script(code=bufstr, path=buffile)
         names = script.infer(line=line, column=column-1)
         if names:
             name = names[0]

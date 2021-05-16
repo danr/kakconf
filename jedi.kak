@@ -8,13 +8,6 @@ provide-module jedi %{
 
 eval %sh{ python $(dirname "$kak_opt_jedi_source")/jedikak.py init }
 
-define-command jedi -params 1.. -hidden %{
-    eval -save-regs b %{
-        exec -draft '%"by'
-        jedi_impl %arg{@}
-    }
-}
-
 declare-option -docstring "colon separated list of path added to `python`'s $PYTHONPATH environment variable" \
     str jedi_python_path
 

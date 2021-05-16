@@ -297,7 +297,4 @@ def parso_impl(desc, buf, arg1, *args):
 if __name__ == '__main__':
     if sys.argv[1:2] == ["test"]:
         test()
-    else:
-        raise ValueError(repr(sys.argv))
-
 
