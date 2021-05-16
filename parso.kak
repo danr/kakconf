@@ -1,14 +1,5 @@
-decl -hidden str parso_source %val{source}
-
 eval %sh{
-    python $(dirname "$kak_opt_parso_source")/parsokak.py init
-}
-
-define-command parso -params 1.. -hidden %{
-    eval -save-regs b %{
-        exec -draft '%"by'
-        parso_impl %arg{@}
-    }
+    python $(dirname "$kak_source")/parsokak.py init
 }
 
 try %{

@@ -18,24 +18,20 @@ def serve(arg_string='%arg{@}', mode='sync'):
         if sys.argv[1:] == ['init']:
 
             print(r''' # kak
+                decl -hidden int NAME_seq_num
                 try %{
                     nop %opt{NAME_arg_string}
                 } catch %{
                     decl -hidden str NAME_arg_string ""
                 }
                 def NAME -override -params .. %{
-                    eval echo -quoting shell -to-file "/tmp/NAME.%val{session}.input" %opt{NAME_arg_string}
+                    set -add global NAME_seq_num 1
+                    eval echo -quoting shell -to-file "/tmp/NAME.%val{session}.input.%opt{NAME_seq_num}" %opt{NAME_arg_string}
                     eval %sh{
                         mtime=$(stat -c %Y FILEPATH)
                         sockfile="/tmp/NAME.$kak_session.$mtime.sock"
                         sockglob="/tmp/NAME.$kak_session.*.sock"
                         logfile="/tmp/NAME.$kak_session.log"
-                        init () {
-                            printf 'init\0' | socat STDIO "UNIX-CONNECT:$sockfile"
-                            printf '\n%s\n' "echo NAME ready"
-                            printf '%s\n' "tail $logfile"
-                            printf '%s\n' "NAME %arg{@}"
-                        }
                         if test ! -S "$sockfile"; then
                             ( {
                                 python -u FILEPATH serve "$sockfile" "$sockglob" 2>&1 | tee -a "$logfile"
@@ -43,23 +39,26 @@ def serve(arg_string='%arg{@}', mode='sync'):
                             for i in {1..250}; do
                                 sleep 0.01
                                 if test -S "$sockfile"; then
-                                    init
-                                    printf '%s\n' "spawn finished after $i rounds" >&2
+                                    printf %s "spawn finished after $i rounds" >&2
+                                    printf %s get_arg_string | socat STDIO "UNIX-CONNECT:$sockfile"
+                                    printf %s "
+                                        echo NAME ready
+                                        tail $logfile
+                                        NAME %arg{@}
+                                    "
                                     exit
                                 fi
                             done
-                            printf '%s\n' "fail failed spawning NAME (FILEPATH)" >&2
-                            printf '%s\n' "fail failed spawning NAME (FILEPATH)"
-                        elif test "$kak_opt_NAME_arg_string" = ""; then
-                            init
+                            printf %s "fail failed spawning NAME (FILEPATH)" >&2
+                            printf %s "fail failed spawning NAME (FILEPATH)"
                         else
-                            input=$(cat "/tmp/NAME.$kak_session.input")
+                            input="/tmp/NAME.$kak_session.input.$kak_opt_NAME_seq_num"
                             if test MODE = async; then
                                 ( {
-                                    printf 'call %s\0' "$input" | socat -t300 STDIO "UNIX-CONNECT:$sockfile" | kak -p "$kak_session"
+                                    printf %s "call $input" | socat -t300 STDIO "UNIX-CONNECT:$sockfile" | kak -p "$kak_session"
                                 } & ) >/dev/null 2>&1 </dev/null
                             else
-                                printf 'call %s\0' "$input" | socat -t300 STDIO "UNIX-CONNECT:$sockfile" | cat
+                                printf %s "call $input" | socat -t300 STDIO "UNIX-CONNECT:$sockfile"
                             fi
                         fi
                     }
@@ -78,7 +77,7 @@ def serve(arg_string='%arg{@}', mode='sync'):
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 try:
                     s.connect(old_sockfile)
-                    s.send(b'\0')
+                    s.send(b'exit')
                     s.close()
                 except:
                     os.remove(old_sockfile)
@@ -88,30 +87,29 @@ def serve(arg_string='%arg{@}', mode='sync'):
             s.listen()
             while True:
                 conn, addr = s.accept()
-                chunks = []
-                while True:
-                    chunks += [conn.recv(4096)]
-                    if b'\0' in chunks[-1]:
-                        break
-                msg = b''.join(chunks)
-                if msg[-1:] == b'\0':
-                    msg = msg[:-1]
-                msg = msg.decode()
-                args = shlex.split(msg)
-                if not args:
-                    print('empty message, shutting down...')
+                msg = conn.recv(1024).decode().split(' ')
+                if not msg:
+                    print('bad message', msg)
+                    conn.close()
+                    continue
+                cmd = msg[0]
+                if cmd == 'exit':
+                    print('exit message, shutting down...')
                     try:
                         conn.close()
                     except:
                         pass
                     os.remove(sockfile)
                     break
-                elif args == ["init"]:
+                elif cmd == 'get_arg_string':
                     conn.sendall(quote('set', 'global', f'{name}_arg_string', arg_string).encode())
                     conn.close()
-                elif args[0] == "call":
+                elif cmd == 'call' and len(msg) == 2:
+                    with open(msg[1]) as fp:
+                        args = shlex.split(fp.read())
+                    os.remove(msg[1])
                     try:
-                        res = f(*args[1:])
+                        res = f(*args)
                         if isinstance(res, str):
                             reply = res
                         else:
@@ -134,8 +132,9 @@ def serve(arg_string='%arg{@}', mode='sync'):
                         ))
                     conn.sendall(reply.encode())
                     conn.close()
-            else:
-                print('bad message', msg)
+                else:
+                    print('bad message', msg)
+                    conn.close()
 
         return f
 

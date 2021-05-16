@@ -204,15 +204,14 @@ def sel(node):
 
 import socky
 
-@socky.serve('%val{selection_desc} %reg{b} %arg{@}')
-def parso_impl(desc, buf, arg1, *args):
+@socky.serve('%val{selection_desc} %val{bufstr} %arg{@}')
+def parso(desc, buf, arg1, *args):
     coords = [
         [ int(c) - i for i, c in enumerate(p.split('.')) ]
         for p in desc.split(',')
     ]
     (line1, col1), (line2, col2) = coords
-    with time('buf_to_rows'):
-        rows = buf_to_rows(buf)
+    rows = buf_to_rows(buf)
     for i, row in enumerate(rows):
         if row.contains(*coords):
             cursor = row
