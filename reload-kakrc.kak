@@ -4,34 +4,29 @@
 # Evals provide module directly
 # Idea: remove all grouped hooks?
 
-decl -hidden str reload_file
-
 def resource -params 1 %{
-    set global reload_file './.reload.kak'
-    eval -draft %{
-        exec \%
-        echo -to-file %opt{reload_file} %val{selection}
-    }
-
-    nop %sh{
-        sed -i 's/^def \([^:]*\)$/def -override \1/' "$kak_opt_reload_file"
-        sed -i 's/^define-command /def -override /' "$kak_opt_reload_file"
-        sed -i 's/^provide-module \w\+ /eval /' "$kak_opt_reload_file"
-        cat "$kak_opt_reload_file" |
-            grep add-highlighter |
+    eval %sh{
+        file=$(dirname "$1")/.reload.kak
+        cat "$1" |
+            sed 's/^def \([^:]*\)$/def -override \1/' |
+            sed 's/^define-command /def -override /'  |
+            sed 's/^provide-module \w\+ /eval /'      |
+            cat > "$file"
+        cat "$1" |
+            grep ^\s*add-highlighter |
             sed 's,add-highlighter\s\+\(\S\+\),rmhl \1 #,' |
             awk '!count[$0]++' |
-            tac > "$kak_opt_reload_file-rmhl"
+            tac > "$file-rmhl"
+        printf %s "
+            source $file-rmhl
+            source $file
+            nop %sh{
+                rm $file-rmhl
+                rm $file
+            }
+        "
     }
-    eval echo -debug "%%file{%opt{reload_file}-rmhl}"
-    eval echo -debug "%%file{%opt{reload_file}}"
-    source "%opt{reload_file}-rmhl"
-    source %opt{reload_file}
-    echo Reloaded %val{bufname}
-    nop %sh{
-        rm "$kak_opt_reload_file-rmhl"
-        rm "$kak_opt_reload_file"
-    }
+    echo Reloaded %arg{1}
 }
 
 rmhooks global reload-kak
