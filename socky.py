@@ -28,7 +28,7 @@ def serve(arg_string='%arg{@}', mode='sync'):
                     set -add global NAME_seq_num 1
                     eval echo -quoting shell -to-file "/tmp/NAME.%val{session}.input.%opt{NAME_seq_num}" %opt{NAME_arg_string}
                     eval %sh{
-                        mtime=$(stat -c %Y FILEPATH)
+                        mtime=$(stat -c %Y FILEPATH).$(stat -c %Y /home/dan/code/kakconf/socky.py)
                         sockfile="/tmp/NAME.$kak_session.$mtime.sock"
                         sockglob="/tmp/NAME.$kak_session.*.sock"
                         logfile="/tmp/NAME.$kak_session.log"
