@@ -107,6 +107,8 @@ map global normal _ ': exec s<ret><ret>'
 map -docstring '<a-k>' global user k <a-k>
 map -docstring '<a-K>' global user K <a-K>
 
+map -docstring 'create terminal' global user c ': connect-x11-terminal<ret>'
+
 def old_X %{
     try %{
         exec -draft \; <a-k>\n<ret>
@@ -566,3 +568,8 @@ def git-log-lines %{
     echo "$anchor_line,$kak_cursor_line:$kak_buffile"
   }
 }
+
+def select-all-splitview %{
+    select "1.1,%val(cursor_line).%val(cursor_column)" "%val(buf_line_count).2147483648,%val(cursor_line).%sh(expr $kak_cursor_column + 1)"
+}
+map -docstring select-all-splitview global z p 'h/\s<ret>: select-all-splitview<ret>'

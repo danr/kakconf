@@ -30,3 +30,5 @@ map global normal z ': enter-user-mode z<ret>'
 # map global z W ': exec <lt>c-d>gc<ret>: enter-user-mode z<ret>'
 # map global z V ': exec <lt>c-u>gc<ret>: enter-user-mode z<ret>'
 
+map -docstring '<a-a> (o)uter' global z o '<a-a>'
+map -docstring '<a-i> (i)nner' global z i '<a-i>'
