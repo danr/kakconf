@@ -25,3 +25,14 @@ def invert -docstring "select everything that isn't selected" %{
         }
     }
 }
+
+try %{ declare-user-mode sels }
+
+map -docstring sels global user s ': enter-user-mode sels<ret>'
+
+map -docstring 'reg^ := sels         (p)ut       ' global sels p Z
+map -docstring 'sels := reg^         (g)et       ' global sels g z
+map -docstring 'sels := sels ∪ reg^  (u)nion     ' global sels u <a-z>a
+map -docstring 'sels := sels ∩ reg^  i(n)tersect ' global sels n ': invert<ret>"sZz: invert<ret>"s<a-z>a: invert<ret>'
+map -docstring 'sels := sels − reg^  (d)ifference' global sels d ': invert<ret>"sZz"s<a-z>a: invert<ret>'
+map -docstring 'sels := ∁ sels       inve(r)t    ' global sels r ': invert<ret>'
