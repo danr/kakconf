@@ -17,7 +17,7 @@ def full-line-ifte -params 2 %{
 
 def line-select %{ full-line-ifte giGl JGl }
 def line-new-cursor %{
-    full-line-ifte giGl '"vZjgiGl"v<a-z>a'
+    full-line-ifte giGl '"vZjgiGl"v<a-z>a<a-*>'
     try print-selection-info
 }
 

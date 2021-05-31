@@ -30,11 +30,6 @@ def replace-ranges-test %{
     set window repl %val{timestamp} '18.38,22.6|..' '20.21,22.4|..'
 }
 
-def retain-indent-enable %{
-    # a simple auto indent
-    hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
-}
-
 def sh -params .. %{
     eval eval "%%sh{""$@"" # %sh{printf '%s ' ""$@"" | grep -o 'kak_\w\+' | tr '\n' ' '}}"
 }

@@ -376,14 +376,19 @@ hook -group kakrc global BufSetOption filetype=pug %{
 
 hook global -group kakrc WinSetOption filetype=python pysetup
 
-def pysetup -hidden %{
-    set window lintcmd 'mypy --show-column-numbers'
-    jedi-enable-autocomplete
-    set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
-    # lint-enable
-    map -docstring 'jedi goto'    window user . ': jedi-goto<ret>'
-    map -docstring 'jedi goto bg' window user b ': i3-new-up; jedi-goto<ret>'
-    map -docstring 'jedi info'    window user i ': jedi-info<ret>'
+
+def pysetup %{
+    # oops, all-in pyright now
+    # try lsp-disable-window
+    lsp-enable-window
+    lsp-auto-hover-enable
+    # set window lintcmd 'mypy --show-column-numbers'
+    # jedi-enable-autocomplete
+    # set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
+    # # lint-enable
+    # map -docstring 'jedi goto'    window user . ': jedi-goto<ret>'
+    # map -docstring 'jedi goto bg' window user b ': i3-new-up; jedi-goto<ret>'
+    # map -docstring 'jedi info'    window user i ': jedi-info<ret>'
 }
 
 def ide %{
@@ -573,3 +578,11 @@ def select-all-splitview %{
     select "1.1,%val(cursor_line).%val(cursor_column)" "%val(buf_line_count).2147483648,%val(cursor_line).%sh(expr $kak_cursor_column + 1)"
 }
 map -docstring select-all-splitview global z p 'h/\s<ret>: select-all-splitview<ret>'
+
+import plugins/mark-show
+mark-show-enable
+
+def retain-indent-enable %{
+    # a simple auto indent
+    hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
+}

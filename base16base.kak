@@ -71,7 +71,9 @@ face global LineNumbers        "%opt{base02},%opt{base00}"
 face global LineNumberCursor   "%opt{base0A},%opt{base00}"
 face global MenuForeground     "%opt{base00},%opt{base0C}"
 face global MenuBackground     "%opt{base05},%opt{base01}"
-face global MenuInfo           "%opt{base02},%opt{base0D}"
+
+face global MenuInfo           "%opt{base01}" # ??
+
 face global Information        "%opt{base0C},%opt{base01}"
 face global Error              "%opt{base00},%opt{base08}"
 face global StatusLine         "%opt{base04},%opt{base01}"
