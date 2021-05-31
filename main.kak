@@ -84,5 +84,6 @@ import modeline
 import surround
 import jedi
 import parso
+import modal
 
 plug caksoylar/kakoune-smooth-scroll
