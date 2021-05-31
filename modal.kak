@@ -18,7 +18,7 @@ def map-modal -params 1 %{
             mode="$1"
             key="$2"
             rhs="$3"
-            opt_key=$(printf %s "$key" | sed s/-/_/g)
+            opt_key="${key//-/_}"
             printf '%s\n' "map global normal <$key> $(kakquote ": mode-key $opt_key<ret>")"
             printf '%s\n' "decl str key_${mode}_${opt_key} $(kakquote "$rhs")"
         }

@@ -86,4 +86,4 @@ import surround
 import parso
 import modal
 
-plug caksoylar/kakoune-smooth-scroll
+# plug caksoylar/kakoune-smooth-scroll
