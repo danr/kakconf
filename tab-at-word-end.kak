@@ -5,7 +5,7 @@ def at-idle-select-next %{
 decl str tab_at_word_end 'exec <c-x>w; at-idle-select-next'
 
 def tab-at-word-end %{
-    if-at-word-end %{ eval %opt{tab_at_word_end} } %{ exec <tab> }
+    if-at-word-end %{ eval %opt{tab_at_word_end} } %{ exec -with-hooks <tab> }
 }
 
 def if-at-word-end -params 2 %{

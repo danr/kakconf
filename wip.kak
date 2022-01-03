@@ -89,11 +89,6 @@ import overwrite
 map global normal R ': overwrite<ret>'
 map global normal C 'r<space>: overwrite<ret>'
 
-# t on k
-map global normal k     t
-map global normal K     T
-map global normal <a-k> <a-t>
-map global normal <a-K> <a-T>
 
 # Split and select
 map global normal -- - s
@@ -123,9 +118,7 @@ import line-selection
 map global normal v     ': line-select<ret>'
 map global normal V     ': old_X<ret>'
 map global normal <A-v> <A-x>
-map global normal <A-V> <A-X>
-map global normal <c-v> ': line-new-cursor<ret>'
-map global normal D     ': old_X<ret>dgi'
+map global normal D     '<a-x>dgi'
 
 # Macros, one selection and remove highlighting
 map global normal <esc> '<esc>: noh<ret><space>'
@@ -310,6 +303,9 @@ hook -group reload-sxhkd global BufWritePost .*sxhkd.* %{
 hook -group kakrc global BufCreate .*sxhkd.* %{ set buffer filetype sh }
 hook -group kakrc global BufCreate .*bspwm.* %{ set buffer filetype sh }
 
+rmhl global/show-tabs
+addhl global/show-tabs show-whitespaces -tab ⭾ -tabpad · -lf ' ' -spc ' ' -nbsp ' '
+
 rmhooks global smarttab
 def delete-tab %{exec 'hGh' "s\A(( {%opt{indentwidth}})*) *\z<ret>" '"1R'}
 hook -group smarttab global InsertDelete ' ' %{
@@ -320,8 +316,8 @@ hook global -group kakrc WinResize .* %{
     echo "%val{window_height}:%val{window_width}"
 }
 
-# Auto expand tabs into spaces
-hook -group expandtabs global InsertChar \t %{ exec -draft -itersel x@ }
+# Auto expand tabs into spaces ??
+hook -group expandtabs global InsertKey .* %{ exec -draft -itersel x@ }
 
 set global grepcmd 'rg -n'
 
@@ -374,21 +370,16 @@ hook -group kakrc global BufSetOption filetype=pug %{
   set buffer disabled_hooks (pug-hooks|pug-indent)
 }
 
-hook global -group kakrc WinSetOption filetype=python pysetup
+hook global -group kakrc WinSetOption filetype=python lsp-setup
+hook global -group kakrc WinSetOption filetype=go lsp-setup
 
-
-def pysetup %{
-    # oops, all-in pyright now
-    # try lsp-disable-window
+def lsp-setup %{
     lsp-enable-window
     lsp-auto-hover-enable
-    # set window lintcmd 'mypy --show-column-numbers'
-    # jedi-enable-autocomplete
-    # set window tab_at_word_end 'eval -draft %{exec b; jedi-complete; at-idle-select-next}'
-    # # lint-enable
-    # map -docstring 'jedi goto'    window user . ': jedi-goto<ret>'
-    # map -docstring 'jedi goto bg' window user b ': i3-new-up; jedi-goto<ret>'
-    # map -docstring 'jedi info'    window user i ': jedi-info<ret>'
+    map -docstring 'lsp goto'    window user . ': lsp-definition<ret>'
+    map -docstring 'lsp prev'    window user n ': lsp-find-error --previous<ret>'
+    map -docstring 'lsp next'    window user t ': lsp-find-error<ret>'
+    set global lsp_completion_fragment_start %{execute-keys <esc><a-h>s\$?[\w'"]+.\z<ret>}
 }
 
 def ide %{
@@ -578,9 +569,6 @@ def select-all-splitview %{
     select "1.1,%val(cursor_line).%val(cursor_column)" "%val(buf_line_count).2147483648,%val(cursor_line).%sh(expr $kak_cursor_column + 1)"
 }
 map -docstring select-all-splitview global z p 'h/\s<ret>: select-all-splitview<ret>'
-
-import plugins/mark-show
-mark-show-enable
 
 def retain-indent-enable %{
     # a simple auto indent

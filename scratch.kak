@@ -50,3 +50,14 @@ def example %{
         }, indent=2)))
     } %val{selections}
 }
+
+def expandtab %{
+
+}
+
+def align-jsonl %{
+    eval -draft %{
+        try %{ exec '%s \K +<ret>d' }
+        exec '%s( \d+\.|, \K")<ret>&'
+    }
+}

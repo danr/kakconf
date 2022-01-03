@@ -13,7 +13,7 @@ try %{
     declare-user-mode fzf-kitty
 }
 
-map global normal j ': enter-user-mode fzf-kitty<ret>'
+map global normal k ': enter-user-mode fzf-kitty<ret>'
 
 map global fzf-kitty m -docstring mru         %(: fzf-kitty %(krc send edit) %(cat ~/.mru | awk '!count[$1]++')<ret>)
 map global fzf-kitty f -docstring file        %(: fzf-kitty %(krc send edit) %(rg --files)<ret>)

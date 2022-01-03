@@ -65,6 +65,10 @@ def lsp-win %{
 
 # plug occivink/kakoune-expand
 
+import mark-show
+mark-show-enable
+
+
 import follow
 import krc
 import reload-kakrc
@@ -83,7 +87,27 @@ import commas
 import modeline
 import surround
 # import jedi
-import parso
+# import parso
 import modal
 
+import jump
+
+# import sel-editor
+
 # plug caksoylar/kakoune-smooth-scroll
+plug caksoylar/kakoune-focus
+# plug JacobTravers/kakoune-grep-write
+import grep-write
+
+def focus-live-enable %{
+    focus-selections
+    hook -group focus window NormalIdle .* %{ focus-selections }
+    hook -group focus window InsertIdle .* %{ focus-selections }
+}
+def focus-live-disable %{
+    remove-hooks window focus
+    focus-clear
+}
+
+
+# plug 'https://gitlab.com/kstr0k/fast-context.kak.git' demand fast-context

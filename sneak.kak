@@ -34,10 +34,10 @@ def sneak-start -params 1 %{
     }
 }
 
-map global normal k     ': forward         sneak-standard<ret>'
-map global normal K     ': forward-extend  sneak-standard<ret>'
-map global normal <a-k> ': backward        sneak-standard<ret>'
-map global normal <a-K> ': backward-extend sneak-standard<ret>'
+# map global normal k     ': forward         sneak-standard<ret>'
+# map global normal K     ': forward-extend  sneak-standard<ret>'
+# map global normal <a-k> ': backward        sneak-standard<ret>'
+# map global normal <a-K> ': backward-extend sneak-standard<ret>'
 
 # map -docstring 'sneak'                global user s     ': forward           sneak-word<ret>'
 # map -docstring 'sneak extend'         global user S     ': forward-extend    sneak-word<ret>'

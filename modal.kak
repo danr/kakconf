@@ -8,7 +8,7 @@ set global modelinefmt '
 
 def key -params 2 %{eval -save-regs '' "exec -save-regs '' %%opt{key_%arg{1}_%arg{2}}"}
 
-def mode-key -params 1 %{try %{key %opt{mode} %arg{1}} catch %{key normal %arg{1}}}
+def mode-key -params 1 %{try %{key %opt{mode} %arg{1}} catch %{enter-mode normal; key %opt{mode} %arg{1}}}
 
 def map-modal -params 1 %{
     eval %sh{
@@ -29,8 +29,11 @@ def map-modal -params 1 %{
 def enter-mode -params 1 %{
     set window mode %arg{1}
     trigger-user-hook "ModeEnter:%arg{1}"
-    info -anchor "%val{cursor_line}.%val{cursor_column}" -- "-- %arg{1} mode --"
     # info -- "-- %arg{1} mode --"
+    # echo -- "-- %opt{mode} mode --"
+    hook -once window RawKey .* %{
+        info -anchor "%val{cursor_line}.%val{cursor_column}" -style above -markup -- "{yellow}-- %opt{mode} mode --"
+    }
 }
 
 rmhooks global modal
@@ -83,10 +86,10 @@ map-modal %{
     map normal   a-a '<semicolon>Gh'
     map normal a-s-a             Gh
 
-    map line h '<lt>'
+    # map line h ': enter-mode normal<ret>: mode-key h<ret>'
     map line t 'J<a-x>'
     map line n 'K<a-x>'
-    map line s '<gt>'
+    # map line s ': enter-mode normal<ret>: mode-key s<ret>'
 
     map block h H
     map block t C
@@ -106,10 +109,13 @@ map-modal %{
     map par T '}p'
     map par s '<gt>'
 
+    map par c-n ': eval -draft move-par-up<ret>'
+    map par c-t ': eval -draft move-par-down<ret>'
+
     map sel h '<a-:><a-semicolon>'
     map sel t ')'
     map sel n '('
-    map sel s '<a-semicolon>'
+    map sel s '<a-:>'
     map sel H ''
     map sel T '<a-)>'
     map sel N '<a-(>'
@@ -145,6 +151,9 @@ map global normal x     ': enter-mode par    <ret>'
 map global normal "'"   ': enter-mode sel    <ret>'
 map global normal <c-/> ': enter-mode search <ret>'
 
+
+
+
 ##
 ## map-modal view h 'vh'
 ## map-modal view t 'vj'
@@ -163,7 +172,7 @@ map global normal <c-/> ': enter-mode search <ret>'
 ##
 
 # From alexherbo2/move-line.kak
-define-command move-lines-down -docstring 'Move selected lines down' %{
+def move-lines-down -docstring 'Move selected lines down' %{
     # Select whole lines
     execute-keys '<a-x><a-_><a-:>'
 
@@ -175,7 +184,7 @@ define-command move-lines-down -docstring 'Move selected lines down' %{
 }
 
 # From alexherbo2/move-line.kak
-define-command move-lines-up -docstring 'Move selected lines up' %{
+def move-lines-up -docstring 'Move selected lines up' %{
     # Select whole lines
     execute-keys '<a-x><a-_><a-:>'
 
@@ -183,5 +192,27 @@ define-command move-lines-up -docstring 'Move selected lines up' %{
     evaluate-commands -itersel %{
         execute-keys -draft '<a-;>b'
         execute-keys -draft '<a-;>Zk<a-x>dzp'
+    }
+}
+
+def move-par-down -docstring 'Move selected paragraph down' %{
+    # Select whole paragraphs
+    exec 'S\n\n+<ret><a-a>p'
+
+    # Iterate each selection and move the paragraph below
+    evaluate-commands -itersel %{
+        execute-keys -draft '<a-a>p'
+        execute-keys -draft 'Z<a-a>pdzP'
+    }
+}
+
+def move-par-up -docstring 'Move selected paragraph up' %{
+    # Select whole paragraphs
+    exec 'S\n\n+<ret><a-a>p'
+
+    # Iterate each selection and move the paragraph above
+    evaluate-commands -itersel %{
+        execute-keys -draft '[p[p<a-a>p'
+        execute-keys -draft 'Z[p[p<a-a>pdzp'
     }
 }
