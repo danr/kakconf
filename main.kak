@@ -94,6 +94,9 @@ import jump
 
 # import sel-editor
 
+import selundo
+import zoom
+
 # plug caksoylar/kakoune-smooth-scroll
 plug caksoylar/kakoune-focus
 # plug JacobTravers/kakoune-grep-write
@@ -109,5 +112,11 @@ def focus-live-disable %{
     focus-clear
 }
 
+def history %{
+    edit -scratch *history*
+    exec '%d'
+    exec '":<a-R>a<ret><esc>'
+    exec ged
+}
 
 # plug 'https://gitlab.com/kstr0k/fast-context.kak.git' demand fast-context
