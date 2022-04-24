@@ -1,5 +1,5 @@
 
-def -override python -params .. %{
+def -override filer-python -params .. %{
     eval %sh{
         vars=$(
             [ "$1" = "-c" ] && printf %s "$2" || cat "$1" |
@@ -13,7 +13,7 @@ def -override python -params .. %{
 decl -hidden str filer_source_dir %sh{dirname "$kak_source"}
 
 def -override filer -params .. %{
-    python "%opt{filer_source_dir}/filer.py" %arg{@}
+    filer-python "%opt{filer_source_dir}/filer.py" %arg{@}
 }
 
 decl line-specs filer_flags

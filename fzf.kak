@@ -17,6 +17,8 @@ map global normal k ': enter-user-mode fzf-kitty<ret>'
 
 map global fzf-kitty m -docstring mru         %(: fzf-kitty %(krc send edit) %(cat ~/.mru | awk '!count[$1]++')<ret>)
 map global fzf-kitty f -docstring file        %(: fzf-kitty %(krc send edit) %(rg --files)<ret>)
+map global fzf-kitty o -docstring file        %(: fzf-kitty %(krc send edit) %(rg --files)<ret>)
+map global fzf-kitty t -docstring file        %(: fzf-kitty %(krc send edit) %(git ls-files)<ret>)
 map global fzf-kitty h -docstring 'file ~'    %(: fzf-kitty %(krc send edit) %(rg ~ --files)<ret>)
 
 map global fzf-kitty g -docstring 'goto line' %(: fzf-kitty-line-goto %(cat ~/.mru | xargs rg -n . .)<ret>)

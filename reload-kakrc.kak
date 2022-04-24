@@ -10,18 +10,13 @@ def resource -params 1 %{
         cat "$1" |
             sed 's/^def \([^:]*\)$/def -override \1/' |
             sed 's/^define-command /def -override /'  |
+            sed 's/^addhl /addhl -override /'  |
+            sed 's/^add-highlighter /addhl -override /'  |
             sed 's/^provide-module \w\+ /eval /'      |
             cat > "$file"
-        cat "$1" |
-            grep ^\s*add-highlighter |
-            sed 's,add-highlighter\s\+\(\S\+\),rmhl \1 #,' |
-            awk '!count[$0]++' |
-            tac > "$file-rmhl"
         printf %s "
-            source $file-rmhl
             source $file
             nop %sh{
-                rm $file-rmhl
                 rm $file
             }
         "

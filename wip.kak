@@ -456,8 +456,6 @@ def fg -params .. %{
     }
 }
 
-alias global sh fg
-
 def chmod -params 1 %{
     info -- %sh{
         chmod -v "$1" "$kak_buffile"
