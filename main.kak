@@ -13,8 +13,16 @@ decl -hidden str source_dir %sh{dirname "$kak_source"}
 def import -params 1 %{
     try %{
         source "~/code/kakconf/%arg{1}.kak"
+    } catch %{
+        echo -debug %val{error}
     }
 }
+
+import ../libpykak/fork
+fork-shell eval '(
+    cd "$kak_opt_source_dir"
+    python -u main.py
+)'
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"
@@ -83,7 +91,6 @@ import tab-at-word-end
 import invert
 import wip
 import find-open
-import commas
 import modeline
 import surround
 # import jedi
@@ -94,11 +101,14 @@ import jump
 
 # import sel-editor
 
-import selundo
+# import selundo
 import zoom
 
+import python
+import wip2
+
 # plug caksoylar/kakoune-smooth-scroll
-plug caksoylar/kakoune-focus
+# plug caksoylar/kakoune-focus
 # plug JacobTravers/kakoune-grep-write
 import grep-write
 
@@ -120,3 +130,65 @@ def history %{
 }
 
 # plug 'https://gitlab.com/kstr0k/fast-context.kak.git' demand fast-context
+
+def sh -params .. %{
+    eval eval "%%sh{""$@"" # %sh{printf '%s ' ""$@"" | grep -o 'kak_\w\+' | tr '\n' ' '}}"
+}
+
+def example %{
+    sh python -c %{if 1:
+        import os, sys, shlex, json
+        env = os.environ.get
+
+        def quote(s):
+            return "'" + s.replace("'", "''") + "'"
+
+        print('info --', quote(json.dumps({
+            'buffile': env('kak_buffile'),
+            'bufname': env('kak_bufname'),
+            'argv': sys.argv,
+            'selections': shlex.split(env('kak_quoted_selections'))
+        }, indent=2)))
+    } %val{selections}
+}
+
+def arrange -params .. %{
+    sh python -c %{if 1:
+        import os, sys, shlex, json
+        def quote(s): return "'" + s.replace("'", "''") + "'"
+        env = os.environ.get
+        args = sys.argv[1:]
+
+        def main():
+            buflist = shlex.split(env('kak_quoted_buflist'))
+            buflist = [b for b in buflist if not '*' in b]
+            bufname = env('kak_bufname')
+
+            pos = {b: i for i, b in enumerate(buflist)}
+
+            if args == ['up']:
+                pos[bufname] -= 1.5
+            if args == ['down']:
+                pos[bufname] += 1.5
+
+            buflist = [
+                b for b, i in sorted(pos.items(), key=lambda bi: bi[1])
+            ]
+
+            lines = [
+                ('>' if b == bufname else ' ') +
+                ' ' + b
+                for b in buflist
+            ]
+
+            print(json.dumps(locals(), indent=2), file=sys.stderr)
+            print('info -- ' + quote('\n'.join(lines)))
+            print('arrange-buffers', *map(quote, buflist))
+
+        main()
+    } %arg{@}
+}
+
+map global normal <a-lt> ': arrange up<ret>'
+map global normal <a-gt> ': arrange down<ret>'
+
