@@ -1,5 +1,9 @@
 
-def if -params 4..5 %{
+def if -params 4..5 -docstring '
+    if <a> == <b> <t> [<f>]
+    Evalutes t if a and b are equal as strings, otherwise f.
+    Note: a and b must be valid command names.
+' %{
     decl -hidden str ifeq_cont
     try %{
         def -hidden -override "ifeq-%arg{1}-%arg{1}" nop
@@ -16,7 +20,6 @@ def if -params 4..5 %{
 }
 
 decl -hidden int sel_line 1
-decl -hidden str sel_mode normal
 decl -hidden str sel_key_type none
 decl -hidden str sel_buffer_type normal
 
@@ -56,20 +59,16 @@ map global normal <a-u> ': prev-selection<ret>'
 map global normal <a-U> ': next-selection<ret>'
 
 rmhooks global selundo
-hook -group selundo global ModeChange .*:.*:(.*) %{
-    try %{
-        set window sel_mode %val{hook_param_capture_1}
-    }
-}
 hook -group selundo global NormalIdle .* %{
     if %opt{sel_buffer_type} == normal %{
-        if %opt{sel_mode} == normal %{
-            if %opt{sel_key_type} == change-selection %{
+        if %opt{sel_key_type} == change-selection %{
+            try %{
                 set window sel_key_type none
-            } %{
-                add-selection
             }
+        } %{
+            add-selection
         }
     }
 }
+
 
