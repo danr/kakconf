@@ -19,7 +19,11 @@ def import -params 1 %{
 }
 
 import ../libpykak/fork
-fork-python -u "%opt{source_dir}/main.py"
+# fork-python -u "%opt{source_dir}/main.py"
+fork-shell eval '(
+    cd "$kak_opt_source_dir"
+    python -u -m main
+)'
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"

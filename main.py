@@ -1,3 +1,5 @@
+import viable as V
+
 import commas
 commas.init()
 
@@ -6,3 +8,5 @@ arrange.init()
 
 import invert
 invert.init()
+
+V.watch()
