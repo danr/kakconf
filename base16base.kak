@@ -47,10 +47,11 @@ face global attribute          "%opt{base0C},%opt{base00}"
 face global comment            "%opt{base0C},%opt{base00}"
 face global meta               "%opt{base0D},%opt{base00}"
 face global builtin            "%opt{base0D},%opt{base00}+b"
+face global code               "%opt{base0C},%opt{base00}+b"
 
 ## markup
 face global title              "%opt{base0D},%opt{base00}+b"
-face global header             "%opt{base0D},%opt{base00}+b"
+face global header             "%opt{base0A},%opt{base00}+b"
 face global bold               "%opt{base0A},%opt{base00}+b"
 face global italic             "%opt{base0E},%opt{base00}"
 face global mono               "%opt{base0B},%opt{base00}"

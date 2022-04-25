@@ -49,7 +49,7 @@ map global insert <a-F> "<esc>: phantom-selection-iterate-prev<ret>i"
 
 plug delapouite/kakoune-livedown
 plug delapouite/kakoune-i3
-plug delapouite/kakoune-buffers
+# plug delapouite/kakoune-buffers
 
 # plug ul/kak-lsp do "cargo build --release --locked; cargo install --force --path ."
 # set global lsp_cmd "kak-lsp -s %val{session}"
