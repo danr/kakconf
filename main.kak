@@ -87,7 +87,7 @@ import z-submap
 import fzf
 import sneak
 import base16base
-import filer
+# import filer
 import tab-at-word-end
 import wip
 import find-open

@@ -51,7 +51,6 @@ def hook_on_insert():
     yield 'hook -group comma-once -once window RawKey     [^,]+ ' + q(cleanup)
 
 @k.map('r')
-@k.cmd
 def replace():
     @k.on_key
     def first(key: str):

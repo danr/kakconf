@@ -1,36 +1,23 @@
 
+from libpykak import k, q
 from datetime import datetime
 from pathlib import Path
 import os
 import re
 import sys
 import shlex
+from typing import Any, Tuple, Iterator
 
-class Quoter:
-    def q1(self, arg):
-        if isinstance(arg, list):
-            return self.q1('\n '.join(arg))
-        elif re.match('^[\w-]+$', arg):
-            return arg
-        else:
-            return "'" + arg.replace("'", "''") + "'"
-
-    def __call__(self, *args):
-        return ' '.join(map(self.q1, args))
-
-    def __getattr__(self, s):
-        return lambda *args: self(s.replace('_', '-'), *args)
-
-q = Quoter()
-
-def show_ts(ts):
+def show_ts(ts: float | int):
     return datetime.fromtimestamp(int(ts))
 
-def show_size(size, units=' KMGTPE'):
+def show_size(size: int, units: str=' KMGTPE') -> str:
     """ Returns a human readable string representation of size """
-    return str(round(size, 0)) + units[0] if size < 1000 else show_size(size / 1024, units[1:])
+    return str(round(size, 0)) + units[0] if size < 1000 else show_size(size // 1024, units[1:])
 
-def go(root, opened, key=[]):
+def go(root: str, opened: set[str], key: list[Any]=[]) -> Iterator[
+    tuple[list[Any], bool, bool, str, str, os.stat_result]
+]:
     try:
         for entry in os.scandir(root):
             if entry.name.startswith('.'):
@@ -55,12 +42,53 @@ def go(root, opened, key=[]):
     except PermissionError:
         pass
 
-prelude = r'''
-    map window normal o     ': filer-on open        <ret>'
-    map window normal c     ': filer-on close       <ret>'
-    map window normal m     ': filer-on mark-toggle <ret>'
-    map window normal M     ': filer-on mark-set    <ret>'
-    map window normal <a-m> ': filer-on mark-remove <ret>'
+def init():
+    k.eval('''
+        try %(decl line-specs filer_flags)
+        try %(decl str filer_path .)
+        try %(decl str-list filer_open)
+        try %(decl str-list filer_mark)
+        def -override exec-if-you-can -params 2 %(
+            try %(
+                exec -draft %arg(1)
+                exec %arg(1)
+            ) catch %(
+                eval %arg(2)
+            )
+        )
+
+        def -override filer-popup %(
+            eval -draft -save-regs '' %(
+                exec ghGL
+                reg s %val(selection)
+            )
+            info -- %sh(
+                file -i "$kak_reg_s"
+                file -b "$kak_reg_s" | fmt
+                if file -bi "$kak_reg_s" | grep -v charset=binary >/dev/null; then
+                    echo
+                    head -c 10000 "$kak_reg_s" |
+                    cut -c -80 | # $((kak_window_width / 2)) |
+                    head -n $((kak_window_height / 2))
+                fi
+            )
+        )
+
+        def -override filer-idle-popup-enable %(
+            hook window -group filer-idle-popup NormalIdle .* filer-popup
+        )
+
+        def -override filer-idle-popup-disable %(
+            rmhooks window filer-idle-popup
+        )
+    ''')
+
+prelude = str(r'''
+    map window normal o     ': filer open        <ret>'
+    map window normal c     ': filer close       <ret>'
+    map window normal m     ': filer mark-toggle <ret>'
+    map window normal M     ': filer mark-set    <ret>'
+    map window normal <a-m> ': filer mark-remove <ret>'
 
     rmhl window/filer1
     rmhl window/filer2
@@ -69,54 +97,72 @@ prelude = r'''
 
     rmhl window/filerflags
     addhl window/filerflags flag-lines magenta filer_flags
-'''
 
-def replace_buffer(*lines):
-    return q.exec('-draft', '%|', r"printf '%s\n' " + shlex.join(lines), '<ret>')
+    rmhooks window filer-redraw
+    hook -group filer-redraw window WinDisplay .* %(filer redraw)
 
-def main(command='', *args):
+''')
 
-    bufname=os.environ.get('kak_bufname')
-    filer_path=os.environ.get('kak_opt_filer_path', '.')
-    filer_open=os.environ.get('kak_quoted_opt_filer_open', '')
-    filer_mark=os.environ.get('kak_quoted_opt_filer_mark', '')
+def replace_buffer(*lines: str):
+    return q('exec', '-draft', '%|', r"printf '%s\n' " + shlex.join(lines), '<ret>')
+
+from typing_extensions import ParamSpec
+from typing import Iterator, Callable
+from functools import wraps
+P = ParamSpec('P')
+
+def eval_generator(f: Callable[P, Iterator[str]]) -> Callable[P, None]:
+    @wraps(f)
+    def inner(*args: P.args, **kws: P.kwargs):
+        k.eval(*f(*args, **kws))
+    return inner
+
+@k.cmd
+@eval_generator
+def filer(command: str='', *args: str) -> Iterator[str]:
+    bufname    = k.val.bufname
+    filer_path = k.opt.filer_path.as_str()
+    filer_open = k.opt.filer_open.as_str_list()
+    filer_mark = k.opt.filer_mark.as_str_list()
 
     if not bufname.startswith('*filer'):
         yield 'edit -scratch *filer*'
 
-    try:
-        filer_open = set(shlex.split(filer_open))
-    except:
-        filer_open = set()
+    filer_open = set(filer_open)
+    filer_mark = set(filer_mark)
 
-    try:
-        filer_mark = set(shlex.split(filer_mark))
-    except:
-        filer_mark = set()
+    [selected_paths] = k.eval_sync(f'''
+        eval -save-regs s %(
+            eval -draft %(
+                exec <a-x><a-s>
+                {k.pk_send} %val(selections)
+            )
+        )
+    ''')
 
-    arg_paths = {arg.strip('\n') for arg in args}
+    arg_paths = {path.strip('\n') for path in selected_paths}
 
-    at_end = []
+    at_end: list[str] = []
 
     if command == 'open':
         for arg in arg_paths:
             if arg.endswith('/'):
                 filer_open |= {arg}
             else:
-                yield q.spawn('danneopen', arg)
+                yield q('spawn', arg)
     elif command == 'close':
         if any(arg in filer_open for arg in arg_paths):
             filer_open -= arg_paths
         else:
-            parents = set()
+            parents: set[str] = set()
             for arg in arg_paths:
                 if arg not in filer_open:
-                    parents.add('^\Q' + str(Path(arg).parent) + '/\E$')
-            parents = '(' + '|'.join(parents) + ')'
+                    parents.add(r'^\Q' + str(Path(arg).parent) + r'/\E$')
+            parents_str: str = '(' + '|'.join(parents) + ')'
             at_end += [
-                q.exec_if_you_can(
-                    '%s' + parents + '<ret>ghGL',
-                    q.fail('no parent'),
+                q('exec-if-you-can',
+                    '%s' + parents_str + '<ret>ghGL',
+                    q('fail', 'no parent'),
                 )
             ]
     elif command == 'mark-toggle':
@@ -134,15 +180,14 @@ def main(command='', *args):
         yield prelude
         if command:
             filer_path = command
-            yield q.set('window', 'filer_watcher', '')
-            yield q.set('window', 'filer_path', filer_path)
+            yield q('set', 'window', 'filer_path', filer_path)
 
-    lines = []
-    repls = []
+    lines: list[str] = []
+    repls: list[str] = []
 
     rows = list(sorted(go(filer_path, filer_open)))
 
-    paths = set()
+    paths: set[str] = set()
 
     open_dirs = {filer_path}
 
@@ -173,12 +218,7 @@ def main(command='', *args):
 
     yield 'set window filer_flags %val{timestamp} ' + q(*repls)
 
-    yield q.set('window', 'filer_open', *sorted(filer_open))
-    yield q.set('window', 'filer_mark', *sorted(filer_mark))
-
-    yield q.watch_dirs(*open_dirs)
+    yield q('set', 'window', 'filer_open', *sorted(filer_open))
+    yield q('set', 'window', 'filer_mark', *sorted(filer_mark))
 
     yield from at_end
-
-if __name__ == '__main__':
-    print('\n'.join(main(*sys.argv[1:])))

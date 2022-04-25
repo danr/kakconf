@@ -9,4 +9,7 @@ arrange.init()
 import invert
 invert.init()
 
+import filer
+filer.init()
+
 V.watch()
