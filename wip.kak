@@ -217,7 +217,7 @@ map -docstring write  global user w ': w<ret>'
 map global normal '#' ': comment-line<ret>'
 
 # Buffers
-hook global WinDisplay .* info-buffers
+# hook global WinDisplay .* info-buffers
 
 map global normal <a-0> ': buffer *debug*<ret>'
 map global normal <a-`> ': edit ~/.kakrc<ret>'
@@ -415,8 +415,6 @@ def lsp-window-completion %{
     map window insert <a-c> '<a-;>: lsp-completion<ret>'
     hook window -group test InsertChar \. lsp-completion
 }
-
-import rofi
 
 hook global WinCreate .* %{
     eval -draft %{

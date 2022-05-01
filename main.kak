@@ -78,34 +78,28 @@ import mark-show
 mark-show-enable
 
 
-import follow
 import krc
 import reload-kakrc
 import one-char-replace
 import selections
 import z-submap
 import fzf
-import sneak
 import base16base
-# import filer
 import tab-at-word-end
 import wip
 import find-open
 import modeline
 import surround
-# import jedi
-# import parso
 import modal
 
 import jump
 
-# import sel-editor
-
 # import selundo
 import zoom
 
-import python
 import wip2
+
+import ./kakoune-rectangles/kakoune-rectangles
 
 # plug caksoylar/kakoune-smooth-scroll
 # plug caksoylar/kakoune-focus
