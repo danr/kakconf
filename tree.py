@@ -5,6 +5,9 @@ from typing import Any
 from dataclasses import dataclass, field
 from typing import Iterator
 import functools
+from collections import Counter
+from pprint import pp
+import shlex
 
 Language.build_library(
   # Store the library in the `build` directory
@@ -24,7 +27,7 @@ PY_LANGUAGE = Language('./my-languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class Node:
     node: Any
     parent: Node | None = None
@@ -99,6 +102,15 @@ class Node:
     def type(self):
         return shorten(self.node.type)
 
+    def inorder(self) -> Iterator[Node]:
+        for _i, node in self.inorder_with_depth():
+            yield node
+
+    def inorder_with_depth(self, depth: int=0) -> Iterator[tuple[int, Node]]:
+        yield depth, self
+        for child in self.children:
+            yield from child.inorder_with_depth(depth+1)
+
 class NodeList(list[Node]):
     def cursor(self, focus: Node, direction: int=1, cycle: bool=True) -> NodeList:
         for i, node in enumerate(self):
@@ -111,6 +123,21 @@ class NodeList(list[Node]):
                     except IndexError:
                         break
         return NodeList([])
+
+    def children(self) -> NodeList:
+        return NodeList(
+            child
+            for node in self
+            for child in node.children
+        )
+
+    def children_at_pos(self, *pos: int) -> NodeList:
+        return NodeList(
+            child
+            for node in self
+            for i, child in enumerate(node.children)
+            if i in pos
+        )
 
     @staticmethod
     def make(*nodes: Node | None) -> NodeList:
@@ -147,11 +174,18 @@ class NodeList(list[Node]):
             )
         )
 
+    def find(self, *byte_pos: int) -> Node | None:
+        if all := self.find_all(*byte_pos):
+            return all[-1]
+        else:
+            return None
 
     def collapse_same_range(self) -> NodeList:
         out = NodeList()
         seen = set[tuple[int, int]]()
         for node in self:
+            if node.type == 'block':
+                continue
             if node.range not in seen:
                 seen.add(node.range)
                 out += [node]
@@ -164,7 +198,18 @@ class NodeList(list[Node]):
             if re.match(r'^\w+$', node.type)
         )
 
-    def inplace_update_children(self) -> NodeList:
+    def inplace_update_nodes(self) -> NodeList:
+        here = set[int]()
+        for node in self:
+            here.add(id(node))
+        for node in self:
+            parent = node.parent
+            while parent:
+                if id(parent) in here:
+                    node.parent = parent
+                    break
+                else:
+                    parent = parent.parent
         for child in self:
             if child.parent:
                 child.parent.children.append(child)
@@ -185,8 +230,8 @@ class NodeList(list[Node]):
                 yield from go(c, this)
         out = NodeList(go(tree))
         out = out.remove_nonalpha()
-        out = out.collapse_same_range()
-        out.inplace_update_children()
+        # out = out.collapse_same_range()
+        out.inplace_update_nodes()
         return out
 
 '''
@@ -206,18 +251,6 @@ ops:
     * cycle through nodes starting (or ending) at cursor anchor/head
 
 re of things to skip (their parent adopts their children):
-    def find(self, *byte_pos: int) -> Node | None:
-        if all := self.find_all(*byte_pos):
-            return all[-1]
-        else:
-            return None
-
-    def collapse_same_range(self) -> NodeList:
-        out = NodeList()
-        seen: set[tuple[int, int]] = set()
-        for node in self:
-            if node.range in seen:
-                pass
     - block
     - expression_statement
     (maybe not in preorder traversal, just skip them if they have exactly the same range)
@@ -230,14 +263,15 @@ def skip(s: str) -> bool:
         expression_statement
     '''.split()
 
+@functools.lru_cache
 def shorten(s: str) -> str:
     subst = {
         'class_definition': 'class',
         'function_definition': 'def',
         '_definition': '_def',
         'decorated_': '@',
-        # 'statement': 'stmt',
-        '_statement': '',
+        'statement': 'stmt',
+        # '_statement': '',
         'expression': 'expr',
         'conditional_expr': 'if_expr',
         'dictionary': 'dict',
@@ -262,20 +296,37 @@ def shorten(s: str) -> str:
         s = s.replace(k, v)
     return s
 
-def init():
-    from libpykak import k, q
+from typing import TypeVar, Callable
+A = TypeVar('A')
+def split_at(xs: list[A], p: Callable[[A], bool]) -> tuple[list[A], list[A]]:
+    for i, x in enumerate(xs):
+        if p(x):
+            return xs[:i], xs[i:]
+    return xs, []
 
+def transpose(xs: list[str]) -> list[str]:
+    return [''.join(t) for t in zip(*xs)]
+
+def collapse_vertical_whitespace(canvas: list[str]) -> list[str]:
+    cols = transpose(canvas)
+    skip = {
+        i
+        for i, col in enumerate(cols[:-1])
+        if col.isspace() and cols[i+1].isspace()
+    }
+    cols = [col for i, col in enumerate(cols) if i not in skip]
+    return transpose(cols)
+
+from libpykak import k, q
+
+def init():
     k.eval('''
         try %(declare-user-mode tree)
         rmhooks global tree
-        map global normal j ': enter_tree_mode<ret>'
+        map global normal x ': enter_tree_mode<ret>'
     ''')
 
-    @k.cmd
-    def enter_tree_mode():
-        if k.opt.filetype != 'python':
-            return
-        buf = k.val.bufstr
+    def byte_offsets():
         [b1s], [b0s] = k.eval_sync(f'''
             eval -draft %(
                 exec <a-:>
@@ -286,55 +337,144 @@ def init():
         ''')
         b0 = int(b0s)+1
         b1 = int(b1s)+1
+        return b0, b1
+
+    def tree_stuff():
+        if k.opt.filetype != 'python':
+            return None
+        buf = k.val.bufstr
+        b0, b1 = byte_offsets()
         node_list = NodeList.parse(buf)
         nodes = node_list.find_all(b0, b1)
         maps: dict[str, NodeList] = {}
         if nodes:
             this = nodes[-1]
-            lines = ['...'] + [
-                (
-                    f'[{node.type:<12}] {node.b0!s:<4} {b0:<4} {b1:<4} {node.b1!s:<4} {node.text.splitlines()[0]}'
-                    if node
-                    else '[...]'
-                )
-                for node in [
-                    *nodes,
-                    # None,
-                    # this.prev_in(node_list),
-                    # None,
-                    # *this.cousins_and_siblings(),
-                    # None,
-                    # this.next_in(node_list),
-                ]
-            ]
-            maps = {
-                't': this.siblings().next(this),
-                'n': this.siblings().prev(this),
-                '<a-t>': this.cousins_and_siblings().next(this),
-                '<a-n>': this.cousins_and_siblings().prev(this),
-                'm': this.cousins_and_siblings(),
-                'b': this.siblings(),
-                'h': node_list.prev(this),
-                's': node_list.next(this),
-                'g': NodeList.make(this.parent),
-                'c': NodeList.make(*this.children),
-            }
-            # sel = f'select {y0}.{x0},{y1}.{max(x1-1,1)}'
-            # lines += [
-            #     str(parent)
-            # ]
+            return this, node_list
         else:
-            lines = []
-            sel = 'nop'
-        lines = []
+            return None
+
+    # @k.hook('NormalIdle', group='tree')
+    def log_tree_stuff():
+        ts = tree_stuff()
+        if not ts:
+            return
+        this, node_list = ts
+        nodes = this.ancestors()
+        nodes, (stmt, *_) = split_at(nodes, lambda node: bool(re.search('stmt|def|class', node.type)))
+        nodes = (nodes + [stmt])[::-1]
+        root= nodes[0]
+        b0, b1 = root.range
+        d_max = 1 + max(d for d, _ in root.inorder_with_depth())
+        canvas = [' ' * root.width for _ in range(d_max)]
+        for d, t in root.inorder_with_depth():
+            canvas[d] = canvas[d][:t.b0 - b0] + t.text.replace('\n', ' ') + canvas[d][t.b1 - b0 + 1:]
+        canvas = collapse_vertical_whitespace(canvas)
+        lines = ['...'] + [
+            (
+                f'[{node.type:<14}] {node.text.splitlines()[0]}'
+                if node
+                else '[...]'
+            )
+            for node in [
+                *nodes,
+                # None,
+                # this.prev_in(node_list),
+                # None,
+                # *this.cousins_and_siblings(),
+                # None,
+                # this.next_in(node_list),
+            ]
+        ] + canvas
+        k.eval(q.debug(*lines))
+
+    def selected_nodes():
+        ts = tree_stuff()
+        if not ts:
+            raise ValueError('no nodes!')
+        _, node_list = ts
+        b0, b1 = byte_offsets()
+        node_list = NodeList([
+            node
+            for node in node_list
+            if b0 <= node.b0 and node.b1 <= b1
+        ])
+        return node_list
+
+    @k.cmd
+    def leaves():
+        node_list = selected_nodes()
+        node_list = NodeList([
+            node
+            for node in node_list
+            if not node.children
+        ])
+        k.eval(node_list.select())
+
+    @k.cmd
+    def pick_subtrees():
+        on_revert_cmd = q('select', *map(str, k.val.selections_desc))
+        node_list = selected_nodes()
+        node_types = Counter(
+            node.type
+            for node in node_list
+        )
+        args: list[str] = []
+        node_dict: dict[str, NodeList] = {}
+        for type, count in node_types.most_common():
+            node_dict[type] = NodeList(
+                node
+                for node in node_list
+                if node.type == type
+            )
+        on_change_name = f'on_change_{k.unique()}'
+        @k.command(hidden=True, name=on_change_name)
+        def on_change():
+            text = k.val.text
+            head, _, rest = text.partition(' ')
+            print(repr(text), head, rest.split())
+            if nodes := node_dict.get(head):
+                if rest == '.':
+                    nodes = nodes.children()
+                elif re.match(r'[\d\s]+$', rest):
+                    pos = [int(x) - 1 for x in rest.split()]
+                    print(pos)
+                    nodes = nodes.children_at_pos(*pos)
+                k.eval(nodes.select())
+        cmd = q(
+            'prompt',
+            '-shell-script-candidates',
+            'printf %s ' + shlex.quote('\n'.join(node_dict.keys())),
+            '-on-change', on_change_name,
+            '-on-abort', on_revert_cmd,
+            'pick:',
+            on_change_name
+        )
+        k.eval(cmd)
+
+    @k.cmd
+    def enter_tree_mode():
+        ts = tree_stuff()
+        if not ts:
+            return
+        this, node_list = ts
+        maps: dict[str, NodeList] = {}
+        nodes = this.ancestors()
+        maps = {
+            't': this.siblings().next(this),
+            'n': this.siblings().prev(this),
+            '<a-t>': this.cousins_and_siblings().next(this),
+            '<a-n>': this.cousins_and_siblings().prev(this),
+            'm': this.cousins_and_siblings(),
+            'b': this.siblings(),
+            'h': node_list.prev(this),
+            's': node_list.next(this),
+            'g': NodeList.make(this.parent),
+            'c': NodeList.make(*this.children),
+        }
         k.eval(
             *[
                 'map window tree ' + q(k, f': {v.select()};enter_tree_mode<ret>')
                 for k, v in maps.items()
-            ],
-            *[
-                q('echo', line, debug=True)
-                for line in lines
             ],
             'enter-user-mode tree',
         )
