@@ -234,6 +234,38 @@ class NodeList(list[Node]):
         out.inplace_update_nodes()
         return out
 
+from lxml import etree
+
+def tree_to_xml(t: Any):
+    def go(node: Any, parent: Any, field: None | str = None):
+        attrib: dict[str, str] = {
+            'start': str(node.start_byte),
+            'end':   str(node.end_byte),
+        }
+        if field:
+            attrib['field'] = field
+        name = shorten(node.type)
+        if name == 'comment':
+            parent.append(etree.Comment(
+                ' ' + node.text.decode().replace('--', '−−') + ' '
+            ))
+            return
+        if not re.match(r'\w[\w\d_\-]*$', name):
+            attrib['name'] = name
+            name = 'delim'
+        this = etree.SubElement(parent, name, **attrib)
+        cursor = node.walk()
+        cursor.goto_first_child()
+        for child in node.children:
+            field_name = cursor.current_field_name()
+            go(child, this, field=field_name or None)
+            cursor.goto_next_sibling()
+        if not node.children:
+            this.text = node.text.decode()
+    root = etree.Element('root')
+    go(t, root)
+    return root
+
 '''
 ops:
     * select parent (for each selection, merging if needed)
@@ -291,6 +323,7 @@ def shorten(s: str) -> str:
         'argument': 'arg',
         '_specifier': '_spec',
         '_conversion': '_conv',
+        '_': '-',
     }
     for k, v in subst.items():
         s = s.replace(k, v)
@@ -338,6 +371,13 @@ def init():
         b0 = int(b0s)+1
         b1 = int(b1s)+1
         return b0, b1
+
+    @k.cmd
+    def xml():
+        buf = k.val.bufstr
+        t: Any = parser.parse(buf.encode())     # type: ignore
+        root = tree_to_xml(t.root_node)
+        k.eval(q.debug(etree.tostring(root, pretty_print=True, encoding='unicode')))
 
     def tree_stuff():
         if k.opt.filetype != 'python':
