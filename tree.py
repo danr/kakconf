@@ -236,36 +236,6 @@ class NodeList(list[Node]):
 
 from lxml import etree
 
-def tree_to_xml(t: Any):
-    def go(node: Any, parent: Any, field: None | str = None):
-        attrib: dict[str, str] = {
-            'start': str(node.start_byte),
-            'end':   str(node.end_byte),
-        }
-        if field:
-            attrib['field'] = field
-        name = shorten(node.type)
-        if name == 'comment':
-            parent.append(etree.Comment(
-                ' ' + node.text.decode().replace('--', '−−') + ' '
-            ))
-            return
-        if not re.match(r'\w[\w\d_\-]*$', name):
-            attrib['name'] = name
-            name = 'delim'
-        this = etree.SubElement(parent, name, **attrib)
-        cursor = node.walk()
-        cursor.goto_first_child()
-        for child in node.children:
-            field_name = cursor.current_field_name()
-            go(child, this, field=field_name or None)
-            cursor.goto_next_sibling()
-        if not node.children:
-            this.text = node.text.decode()
-    root = etree.Element('root')
-    go(t, root)
-    return root
-
 '''
 ops:
     * select parent (for each selection, merging if needed)
@@ -352,6 +322,147 @@ def collapse_vertical_whitespace(canvas: list[str]) -> list[str]:
 
 from libpykak import k, q
 
+@dataclass(frozen=True)
+class XML:
+    root: Any
+
+    @staticmethod
+    def parse(buf: str) -> XML:
+        t: Any = parser.parse(buf.encode())     # type: ignore
+        return XML.from_tree(t.root_node)
+
+    @staticmethod
+    def from_tree(t: Any) -> XML:
+        def node_range(node: Any):
+            return (
+                start := str(node.start_byte),
+                end   := str(node.end_byte),
+                range := f'{start}-{end}',
+            )
+
+        def go(node: Any, parent: Any, types: list[str] = [], fields: list[str] = []):
+            node_type = shorten(node.type)
+            if not re.match(r'\w[\w\d_\-]*$', node_type):
+                node_type = 'delim'
+            if node.children:
+                types = [
+                    node_type,
+                    *types,
+                ]
+            start, end, range = node_range(node)
+            if len(node.children) == 1:
+                _, _, child_range = node_range(node)
+                [child] = node.children
+                print(child_range, range)
+                if child_range == range and child.type != 'comment':
+                    cursor = node.walk()
+                    cursor.goto_first_child()
+                    field_name = cursor.current_field_name()
+                    if field_name:
+                        fields = [
+                            *fields,
+                            f'{node_type}.{shorten(field_name)}'
+                        ]
+                    go(child, parent, types, fields)
+                    return
+            attrib: dict[str, str] = {}
+            # def pad(xs: list[str]) -> str:
+            #     return ' ' + ' '.join(xs) + ' '
+            # if types:
+            #     attrib['types'] = pad(types)
+            # if fields:
+            #     attrib['fields'] = pad(fields)
+            for x in types + fields:
+                attrib[x] = "true"
+            attrib['range'] = range
+            # if node.type == 'comment':
+            #     parent.append(etree.Comment(
+            #         ' ' + node.text.decode().replace('--', '−−') + ' '
+            #     ))
+            #     return
+            name = node_type # 'nt' if node.children else 't'
+            this = etree.SubElement(parent, name, **attrib)
+            cursor = node.walk()
+            cursor.goto_first_child()
+            for child in node.children:
+                field_name = cursor.current_field_name()
+                child_fields: list[str] = []
+                if field_name:
+                    child_fields += [
+                        f'{node_type}.{shorten(field_name)}'
+                    ]
+                go(child, this, [], child_fields)
+                cursor.goto_next_sibling()
+            # string contents?
+            if not node.children:
+                this.text = node.text.decode()
+        root = etree.Element('root')
+        go(t, root)
+        return XML(root)
+
+    def pp(self):
+        return etree.tostring(
+            self.root,
+            pretty_print=True,
+            encoding='unicode'
+        )
+
+    def pr(self):
+        print(self.pp())
+
+    def xpath(self, s: str):
+        return [
+            # XML(e.getparent()) if hasattr(e, 'getparent') else XML(e)
+            XML(e.getparent())
+            if 'ElementUnicodeResult' in repr(type(e)) else
+            XML(e)
+            for e in self.root.xpath(s)
+        ]
+
+def test():
+    s = '''if 1:
+        f.x(1, 2, 3)
+        if a:
+            b
+        elif c:
+            d
+        elif e:
+            f
+        else:
+            g
+        maps = {
+            't': this.siblings().next(this),
+            'n': this.siblings().prev(this),
+            '<a-t>': this.cousins_and_siblings().next(this),
+        }
+
+    '''
+    doc = XML.parse(s)
+    doc.pr()
+    # for sub in doc.xpath('//arg-list/integer'):
+    #     sub.pr()
+
+    # for sub in doc.xpath('//*[@start >= 17 and @end <= 25]'):
+    #     sub.pr()
+
+    examples = '''
+        //ident[@if-stmt.consequence | @elif-clause.consequence | @else-clause.body]
+        //call[@expr-stmt]
+        //dict//@pair.key
+        //dict//*[@pair.value]//arg-list
+    '''.splitlines()
+
+    for ex in examples:
+        ex = ex.strip()
+        if not ex:
+            continue
+        print('---', ex, '---')
+        for sub in doc.xpath(ex):
+            sub.pr()
+
+if __name__ == '__main__':
+    test()
+
 def init():
     k.eval('''
         try %(declare-user-mode tree)
@@ -375,9 +486,8 @@ def init():
     @k.cmd
     def xml():
         buf = k.val.bufstr
-        t: Any = parser.parse(buf.encode())     # type: ignore
-        root = tree_to_xml(t.root_node)
-        k.eval(q.debug(etree.tostring(root, pretty_print=True, encoding='unicode')))
+        xml = XML.parse(buf)
+        k.eval(q.debug(xml.pp()))
 
     def tree_stuff():
         if k.opt.filetype != 'python':
