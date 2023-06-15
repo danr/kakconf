@@ -27,213 +27,6 @@ PY_LANGUAGE = Language('./my-languages.so', 'python')
 parser = Parser()
 parser.set_language(PY_LANGUAGE)
 
-@dataclass(frozen=False)
-class Node:
-    node: Any
-    parent: Node | None = None
-    children: list[Node] = field(default_factory=list)
-
-    def ancestors(self) -> list[Node]:
-        if self.parent:
-            return [self, *self.parent.ancestors()]
-        else:
-            return [self]
-
-    @property
-    def b0(self) -> int:
-        return self.node.start_byte + 1
-
-    @property
-    def b1(self) -> int:
-        return self.node.end_byte
-
-    @property
-    def range(self) -> tuple[int, int]:
-        return self.b0, self.b1
-
-    @property
-    def width(self) -> int:
-        return self.b1 - self.b0 + 1
-
-    def kak_coord(self) -> str:
-        y0, x0 = [i+1 for i in self.node.start_point]
-        y1, x1 = [i+1 for i in self.node.end_point]
-        return f'{y0}.{x0},{y1}.{x1-1}'
-
-    def contains(self, *byte_pos: int) -> bool:
-        return all(
-            self.b0 <= b <= self.b1
-            for b in byte_pos
-        )
-
-    def siblings(self) -> NodeList:
-        if self.parent:
-            return NodeList(self.parent.children)
-        else:
-            return NodeList()
-
-    def cousins_and_siblings(self) -> NodeList:
-        if self.parent and self.parent.parent:
-            return NodeList([
-                cousin
-                for uncle in self.parent.parent.children
-                for cousin in uncle.children
-            ])
-        else:
-            return self.siblings()
-
-    def first_child(self) -> Node | None:
-        if self.children:
-            return self.children[0]
-        else:
-            return None
-
-    def last_child(self) -> Node | None:
-        if self.children:
-            return self.children[-1]
-        else:
-            return None
-
-    @property
-    def text(self):
-        return self.node.text.decode()
-
-    @property
-    def type(self):
-        return shorten(self.node.type)
-
-    def inorder(self) -> Iterator[Node]:
-        for _i, node in self.inorder_with_depth():
-            yield node
-
-    def inorder_with_depth(self, depth: int=0) -> Iterator[tuple[int, Node]]:
-        yield depth, self
-        for child in self.children:
-            yield from child.inorder_with_depth(depth+1)
-
-class NodeList(list[Node]):
-    def cursor(self, focus: Node, direction: int=1, cycle: bool=True) -> NodeList:
-        for i, node in enumerate(self):
-            if node is focus:
-                if cycle:
-                    return NodeList([self[(i + direction) % len(self)]])
-                else:
-                    try:
-                        return NodeList([self[i + direction]])
-                    except IndexError:
-                        break
-        return NodeList([])
-
-    def children(self) -> NodeList:
-        return NodeList(
-            child
-            for node in self
-            for child in node.children
-        )
-
-    def children_at_pos(self, *pos: int) -> NodeList:
-        return NodeList(
-            child
-            for node in self
-            for i, child in enumerate(node.children)
-            if i in pos
-        )
-
-    @staticmethod
-    def make(*nodes: Node | None) -> NodeList:
-        return NodeList([
-            node
-            for node in nodes
-            if node
-        ])
-
-    def next(self, focus: Node, cycle: bool=True) -> NodeList:
-        return self.cursor(focus, 1, cycle=cycle)
-
-    def prev(self, focus: Node, cycle: bool=True) -> NodeList:
-        return self.cursor(focus, -1, cycle=cycle)
-
-    def prev_in(self, nodes: list[Node]) -> Node | None:
-        for prev, node in zip(nodes, nodes[1:]):
-            if node is self:
-                return prev
-        return None
-
-    def select(self):
-        return ' '.join(('select', *(node.kak_coord() for node in self)))
-
-    def find_all(self, *byte_pos: int) -> NodeList:
-        return NodeList(
-            sorted(
-                (
-                    node
-                    for node in self
-                    if node.contains(*byte_pos)
-                ),
-                key=lambda node: -node.width
-            )
-        )
-
-    def find(self, *byte_pos: int) -> Node | None:
-        if all := self.find_all(*byte_pos):
-            return all[-1]
-        else:
-            return None
-
-    def collapse_same_range(self) -> NodeList:
-        out = NodeList()
-        seen = set[tuple[int, int]]()
-        for node in self:
-            if node.type == 'block':
-                continue
-            if node.range not in seen:
-                seen.add(node.range)
-                out += [node]
-        return out
-
-    def remove_nonalpha(self) -> NodeList:
-        return NodeList(
-            node
-            for node in self
-            if re.match(r'^\w+$', node.type)
-        )
-
-    def inplace_update_nodes(self) -> NodeList:
-        here = set[int]()
-        for node in self:
-            here.add(id(node))
-        for node in self:
-            parent = node.parent
-            while parent:
-                if id(parent) in here:
-                    node.parent = parent
-                    break
-                else:
-                    parent = parent.parent
-        for child in self:
-            if child.parent:
-                child.parent.children.append(child)
-        return self
-
-    @functools.lru_cache
-    @staticmethod
-    def parse(buf: str, filetype: str='python'):
-        t: Any = parser.parse(buf.encode())     # type: ignore
-        return NodeList.from_tree(t.root_node)
-
-    @staticmethod
-    def from_tree(tree: Any) -> NodeList:
-        def go(node: Any, parent: Node | None = None) -> Iterator[Node]:
-            this = Node(node, parent)
-            yield this
-            for c in node.children:
-                yield from go(c, this)
-        out = NodeList(go(tree))
-        out = out.remove_nonalpha()
-        # out = out.collapse_same_range()
-        out.inplace_update_nodes()
-        return out
-
 from lxml import etree
 
 '''
@@ -247,7 +40,7 @@ ops:
     * select prev/next leaf (?)
     * extend forward/backward
     * filter by type, field:, or field:type, or depth
-        - of currently selected
+        - of currently container
         - of all subtrees (!?)
         - to keep or to remove
     * cycle through nodes starting (or ending) at cursor anchor/head
@@ -258,12 +51,6 @@ re of things to skip (their parent adopts their children):
     (maybe not in preorder traversal, just skip them if they have exactly the same range)
 
 '''
-
-def skip(s: str) -> bool:
-    return s in '''
-        block
-        expression_statement
-    '''.split()
 
 @functools.lru_cache
 def shorten(s: str) -> str:
@@ -322,77 +109,113 @@ def collapse_vertical_whitespace(canvas: list[str]) -> list[str]:
 
 from libpykak import k, q
 
+def etree_named_children(node: Any) -> list[tuple[str | None, Any]]:
+    out: list[tuple[str | None, Any]] = []
+    cursor = node.walk()
+    cursor.goto_first_child()
+    for child in node.children:
+        field_name = cursor.current_field_name()
+        out += [(field_name, child)]
+        cursor.goto_next_sibling()
+    return out
+
+@dataclass(frozen=False)
+class Node:
+    node: Any
+
+    @property
+    def b0(self) -> int:
+        return self.node.start_byte + 1
+
+    @property
+    def b1(self) -> int:
+        return self.node.end_byte
+
+    @property
+    def range(self) -> tuple[int, int]:
+        return self.b0, self.b1
+
+    @property
+    def width(self) -> int:
+        return self.b1 - self.b0 + 1
+
+    def kak_coord(self) -> str:
+        y0, x0 = [i+1 for i in self.node.start_point]
+        y1, x1 = [i+1 for i in self.node.end_point]
+        return f'{y0}.{x0},{y1}.{x1-1}'
+
+    '''
+
+       [ node ]     wider       focus="contains"   .//*[@container]
+        [node]      exact       focus="exact"      not(ancestor::@focus)
+        no[d]e      inside      focus="partial"
+        no[de  ]    partial
+      [ n]od[e ]    ?partial
+        node []     outside
+
+    '''
+
+    def included(self, *byte_pos: int) -> bool:
+        return all(
+            self.b0 <= b <= self.b1
+            for b in byte_pos
+        )
+
+    def container(self, *byte_pos: int) -> bool:
+        '''
+        .....WORD....
+        ..[   ]......
+        .......[   ].
+        ...[       ].
+        ......[ ]....
+        not (r < b0 or l > b1) =
+        not (r < b0) and not (l > b1) =
+        r >= b0 and l <= b1
+        '''
+        b0, b1 = min(self.range), max(self.range)
+        l, r = min(byte_pos), max(byte_pos)
+        return b0 <= l and r <= b1
+
+    def selection(self, *byte_pos: int) -> bool:
+        b0, b1 = min(self.range), max(self.range)
+        l, r = min(byte_pos), max(byte_pos)
+        return b0 == l and r == b1
+
 @dataclass(frozen=True)
 class XML:
     root: Any
 
     @staticmethod
-    def parse(buf: str) -> XML:
+    def parse(buf: str, *byte_pos: int) -> XML:
         t: Any = parser.parse(buf.encode())     # type: ignore
-        return XML.from_tree(t.root_node)
+        return XML.from_tree(t.root_node, *byte_pos)
 
     @staticmethod
-    def from_tree(t: Any) -> XML:
-        def node_range(node: Any):
-            return (
-                start := str(node.start_byte),
-                end   := str(node.end_byte),
-                range := f'{start}-{end}',
-            )
-
-        def go(node: Any, parent: Any, types: list[str] = [], fields: list[str] = []):
+    def from_tree(t: Any, *byte_pos: int) -> XML:
+        def go(node: Any, parent: Any, field_name: str | None = None):
             node_type = shorten(node.type)
-            if not re.match(r'\w[\w\d_\-]*$', node_type):
+            if not re.match(r'[\w_][\w\d_\-]*$', node_type):
                 node_type = 'delim'
-            if node.children:
-                types = [
-                    node_type,
-                    *types,
-                ]
-            start, end, range = node_range(node)
-            if len(node.children) == 1:
-                _, _, child_range = node_range(node)
-                [child] = node.children
-                print(child_range, range)
-                if child_range == range and child.type != 'comment':
-                    cursor = node.walk()
-                    cursor.goto_first_child()
-                    field_name = cursor.current_field_name()
-                    if field_name:
-                        fields = [
-                            *fields,
-                            f'{node_type}.{shorten(field_name)}'
-                        ]
-                    go(child, parent, types, fields)
-                    return
-            attrib: dict[str, str] = {}
-            # def pad(xs: list[str]) -> str:
-            #     return ' ' + ' '.join(xs) + ' '
-            # if types:
-            #     attrib['types'] = pad(types)
-            # if fields:
-            #     attrib['fields'] = pad(fields)
-            for x in types + fields:
-                attrib[x] = "true"
-            attrib['range'] = range
-            # if node.type == 'comment':
-            #     parent.append(etree.Comment(
-            #         ' ' + node.text.decode().replace('--', '−−') + ' '
-            #     ))
-            #     return
+            attrib: dict[str, str] = {
+                'text': node.text.decode(),
+                'desc': str(Node(node).kak_coord()),
+            }
+            if Node(node).container(*byte_pos):
+                attrib['container'] = 'true'
+            if Node(node).selection(*byte_pos):
+                attrib['selection'] = 'true'
+            if field_name:
+                # attrib['field'] = shorten(field_name)
+                attrib[shorten(field_name)] = "field"
+            if 0 and node.type == 'comment':
+                parent.append(etree.Comment(
+                    ' ' + node.text.decode().replace('--', '−−') + ' '
+                ))
+                return
             name = node_type # 'nt' if node.children else 't'
-            this = etree.SubElement(parent, name, **attrib)
-            cursor = node.walk()
-            cursor.goto_first_child()
-            for child in node.children:
-                field_name = cursor.current_field_name()
-                child_fields: list[str] = []
-                if field_name:
-                    child_fields += [
-                        f'{node_type}.{shorten(field_name)}'
-                    ]
-                go(child, this, [], child_fields)
-                cursor.goto_next_sibling()
+            this = etree.SubElement(parent, node_type, **attrib)
+            for field_name, child in etree_named_children(node):
+                go(child, this, field_name)
             # string contents?
             if not node.children:
                 this.text = node.text.decode()
@@ -401,6 +224,8 @@ class XML:
         return XML(root)
 
     def pp(self):
+        if isinstance(self.root, str):
+            return repr(self.root)
         return etree.tostring(
             self.root,
             pretty_print=True,
@@ -408,13 +233,13 @@ class XML:
         )
 
     def pr(self):
-        print(self.pp())
+        print(self.pp().strip())
 
     def xpath(self, s: str):
         return [
             # XML(e.getparent()) if hasattr(e, 'getparent') else XML(e)
-            XML(e.getparent())
-            if 'ElementUnicodeResult' in repr(type(e)) else
+            # XML(e.getparent())
+            # if 'ElementUnicodeResult' in repr(type(e)) else
             XML(e)
             for e in self.root.xpath(s)
         ]
@@ -437,7 +262,7 @@ def test():
         }
 
     '''
-    doc = XML.parse(s)
+    doc = XML.parse(s, 2, len(s))
     doc.pr()
     # for sub in doc.xpath('//arg-list/integer'):
     #     sub.pr()
@@ -446,19 +271,37 @@ def test():
     #     sub.pr()
 
     examples = '''
-        //ident[@if-stmt.consequence | @elif-clause.consequence | @else-clause.body]
-        //call[@expr-stmt]
-        //dict//@pair.key
-        //dict//*[@pair.value]//arg-list
+        //expr-stmt/call
+        //expr-stmt[call]
+        //call[parent::expr-stmt]
+        //call[../../expr-stmt]
+        //dict//*[@key]
+        //dict//*[@value]//ident
+        //integer
+        //ident[@condition]
+        //arg-list/*[not(self::delim)]
+        //arg-list/*[not(name()="delim")]
+        //arg-list/*[count(self::delim)=0]
+        //arg-list/*[1]
+        (//arg-list/*)[1]
+        //*[@*="field"][count(.//*)<=2]
+        //@container
     '''.splitlines()
 
     for ex in examples:
         ex = ex.strip()
         if not ex:
             continue
-        print('---', ex, '---')
+        print('>>>', ex)
         for sub in doc.xpath(ex):
             sub.pr()
+
+    ns = etree.FunctionNamespace(None)
+    @ns
+    def has(ctx, name):
+        return name in ctx.context_node.attrib
+
+    # print(doc.root.xpath(r"//*[has('key')]/.."))
 
 if __name__ == '__main__':
     test()
@@ -486,8 +329,45 @@ def init():
     @k.cmd
     def xml():
         buf = k.val.bufstr
-        xml = XML.parse(buf)
-        k.eval(q.debug(xml.pp()))
+        xml = XML.parse(buf, *byte_offsets())
+        sel = '(//*[@container and not(*/@container)])'
+        k.eval(
+            q.debug(
+                # '=== full:',
+                # xml.pp(),
+                # '=== parent:',
+                # *[e.pp() for e in xml.xpath(f'{sel}/ancestor::*[not(@selection)][1]')],
+                # '=== children:',
+                # *[e.pp() for e in xml.xpath(f'{sel}/*')],
+                # '=== siblings:',
+                # *[e.pp() for e in xml.xpath(f'{sel}/preceding-sibling::* | {sel}/following-sibling::*')],
+                ' ',
+                # '=== prev sibling:',
+                # '=== prev:',
+                # *[e.pp() for e in xml.xpath(f'(({sel}/preceding-sibling::*[1]) | ({sel}/following-sibling::*[last()]))[1]')],
+                # '=== selected:',
+                # *[e.pp() for e in xml.xpath(f'({sel}/preceding-sibling::* | {sel} | {sel}/following-sibling::*)')],
+                # '=== next:',
+                # *[e.pp() for e in xml.xpath(f'(({sel}/following-sibling::*[1]) | ({sel}/../*[1]))[last()]')],
+                '=== test:',
+                *[e.pp() for e in xml.xpath(f'({sel}/preceding-sibling::*[1])')],
+                '=== test2:',
+                *[e.pp() for e in xml.xpath(f'({sel}/preceding-sibling::*)[1]')],
+                '=== test3:',
+                *[e.pp() for e in xml.xpath(f'({sel}/preceding-sibling::*)[last()]')],
+                '=== a1:',
+                *[e.pp() for e in xml.xpath(f'{sel}/../*[1] | {sel}/../*[last()]')],
+                '=== a2:',
+                *[e.pp() for e in xml.xpath(f'{sel}/../*[last()] | {sel}/../*[1]')],
+                # *[e.pp() for e in xml.xpath(sel)],
+                # '=== next sibling:',
+                # *[e.pp() for e in xml.xpath(f'({sel}/following-sibling::* | {sel}/../*[1])')],
+                # '=== next preorder:',
+                # *[e.pp() for e in xml.xpath(f'({sel}/descendant::* | {sel}/following::*)[1]')],
+                # '=== prev preorder:',
+                # *[e.pp() for e in xml.xpath(f'({sel}/preceding::* | {sel}/ancestor::*)[last()]')],
+            )
+        )
 
     def tree_stuff():
         if k.opt.filetype != 'python':

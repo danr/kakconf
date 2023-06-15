@@ -47,3 +47,4 @@ define-command select-until %{
     execute-keys -save-regs '' Z
     prompt -on-change 'select-until-aux <a-semicolon>' until: select-until-aux
 }
+

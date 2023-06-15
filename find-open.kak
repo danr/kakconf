@@ -43,7 +43,7 @@ def -hidden find-open %{
 
 def close %{
     eval -draft -itersel %{
-        exec <space>
+        exec <,>
         find-open
         exec i %opt{closing_char} <esc>
     }
@@ -54,7 +54,7 @@ try %{ addhl global/ ranges openings }
 
 def open-show %{
     eval -draft %{
-        exec <space>
+        exec <,>
         find-open
         try %{
             set window openings %val{timestamp} "%opt{opening_desc}|magenta+f"

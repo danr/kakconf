@@ -37,7 +37,7 @@ def enter-mode -params 1 %{
 }
 
 rmhooks global modal
-hook global -group modal User ModeEnter:line %{exec <a-x>}
+hook global -group modal User ModeEnter:line %{exec x}
 
 def move-line-dn %{ exec -draft <a-x>d<a-p> }
 def move-line-up %{ exec -draft <a-x>dk<a-P> }
@@ -87,8 +87,8 @@ map-modal %{
     map normal a-s-a             Gh
 
     # map line h ': enter-mode normal<ret>: mode-key h<ret>'
-    map line t 'J<a-x>'
-    map line n 'K<a-x>'
+    map line t 'Jx'
+    map line n 'Kx'
     # map line s ': enter-mode normal<ret>: mode-key s<ret>'
 
     map block h H
@@ -136,7 +136,7 @@ map-modal %{
 def normal-esc %{
     eval %sh{
         if test "$kak_opt_mode" == "normal"; then
-            echo exec '<esc><space>'
+            echo exec '<esc><,>'
         else
             echo enter-mode normal
         fi

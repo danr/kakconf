@@ -81,13 +81,13 @@ map global normal <a-g> <a-n>978vh
 map global normal <a-G> <a-N>978vh
 
 # J a'la vim
-def J %{exec -itersel <A-J><a-_>c<space><esc><space>vm }
+def J %{exec -itersel <A-J><a-_>c<esc><,>vm }
 map global normal J ': J<ret>'
 
 # Overwrite a'la vim R
 import overwrite
 map global normal R ': overwrite<ret>'
-map global normal C 'r<space>: overwrite<ret>'
+map global normal C 'r<,>: overwrite<ret>'
 
 
 # Split and select
@@ -121,14 +121,14 @@ map global normal <A-v> <A-x>
 map global normal D     '<a-x>dgi'
 
 # Macros, one selection and remove highlighting
-map global normal <esc> '<esc>: noh<ret><space>'
+map global normal <esc> '<esc>: noh<ret><,>'
 
 # ret...
 map -docstring <ret> global user <ret> <ret>
 
 # Nav
-map global normal <space> '<space>: pagewise j<ret>'
-map global normal <ret>   '<space>: pagewise k<ret>'
+map global normal <space> '<,>: pagewise j<ret>'
+map global normal <ret>   '<,>: pagewise k<ret>'
 
 decl int viewport_h
 decl int viewport_y
@@ -159,7 +159,7 @@ map global normal <c-g> ': viewport_preserve n<ret>'
 map global normal * lbhe*
 map -docstring * global user   8 *
 
-map global normal = <space>
+map global normal = <,>
 
 def selinfo %{
     info '
@@ -170,7 +170,7 @@ def selinfo %{
     '
 }
 
-#hook -group kakrc global NormalKey '^(<a-[:;]>|<space>|;)$' selinfo
+#hook -group kakrc global NormalKey '^(<a-[:;]>|<,>|;)$' selinfo
 
 # Register
 map -docstring '(") register' global user "'" '"'
@@ -207,8 +207,24 @@ def xcopy -params 0..1 %{eval %sh{
 map global normal y 'y: xcopy<ret>'
 #hook global -group kakrc NormalKey y %{xcopy}
 
+def user-x %{
+    try %{
+        decl str text
+    }
+    try %{
+        exec -draft '<a-k>..<ret>'
+        eval -itersel %val{selection}
+    } catch %{
+        eval -draft %{
+            exec '%'
+            set window text %val{selection}
+        }
+        eval %opt{text}
+    }
+}
+
 # Execute current selection(s)
-map -docstring eval global user x %{: eval -itersel %val{selection}<ret>}
+map -docstring eval global user x ': user-x<ret>'
 
 # Write buffer
 map -docstring write  global user w ': w<ret>'
@@ -270,10 +286,9 @@ hook global BufSetOption filetype=makefile %{
 }
 
 # Options
-set global ui_options ncurses_assistant=none ncurses_set_title=false
-hook global WinCreate .* %{
-    set -add window ui_options "ncurses_set_title=%val{bufname} - kakoune"
-}
+set global ui_options terminal_assistant=none
+# ncurses_set_title=false
+# hook global WinCreate .* %{ set -add window ui_options "terminal_set_title=%val{bufname} - kakoune" }
 set global tabstop 4
 set global idle_timeout 50
 set global scrolloff 1,0
@@ -312,8 +327,10 @@ hook -group smarttab global InsertDelete ' ' %{
     eval -draft -itersel %{try delete-tab}
 }
 
-hook global -group kakrc WinResize .* %{
-    echo "%val{window_height}:%val{window_width}"
+hook -once global NormalIdle .* %{
+    hook global -group kakrc WinResize .* %{
+        echo "%val{window_height}:%val{window_width}"
+    }
 }
 
 # Auto expand tabs into spaces ??
@@ -374,12 +391,14 @@ hook global -group kakrc WinSetOption filetype=python lsp-setup
 hook global -group kakrc WinSetOption filetype=go lsp-setup
 
 def lsp-setup %{
-    lsp-enable-window
-    lsp-auto-hover-enable
+    # lsp-auto-hover-enable
+    map -docstring 'lsp hover'   window user H ': toggle window lsp-auto-hover-enable lsp-auto-hover-disable<ret>'
+    map -docstring 'lsp mode'    window user l ': enter-user-mode lsp<ret>'
+    map -docstring 'lsp hover'   window user h ': lsp-hover<ret>'
     map -docstring 'lsp goto'    window user . ': lsp-definition<ret>'
-    map -docstring 'lsp prev'    window user n ': lsp-find-error --previous<ret>'
-    map -docstring 'lsp next'    window user t ': lsp-find-error<ret>'
-    set global lsp_completion_fragment_start %{execute-keys <esc><a-h>s\$?[\w'"]+.\z<ret>}
+    map -docstring 'lsp prev'    window user n ': lsp-find-error --previous<ret>: lsp-hover<ret>'
+    map -docstring 'lsp next'    window user t ': lsp-find-error<ret>: lsp-hover<ret>'
+    lsp-enable-window
 }
 
 def ide %{
@@ -533,8 +552,8 @@ def selection-hull \
   -docstring 'The smallest single selection containing every selection.' \
   %{
   eval -save-regs 'ab' %{
-    exec '"aZ' '<space>"bZ'
-    try %{ exec '"az<a-space>' }
+    exec '"aZ' '<,>"bZ'
+    try %{ exec '"az<a-,>' }
     exec -itersel '"b<a-Z>u'
     exec '"bz'
     echo
@@ -569,4 +588,18 @@ map -docstring select-all-splitview global z p 'h/\s<ret>: select-all-splitview<
 def retain-indent-enable %{
     # a simple auto indent
     hook -group retain-indent window InsertChar \n %{ exec -draft -itersel K<a-&> }
+}
+
+def tabstop-impl -hidden -params 1 %{
+    set buffer tabstop %arg{1}
+    set buffer indentwidth %arg{1}
+    echo "tabstop: %opt{tabstop}, indentwidth: %opt{indentwidth}"
+    echo -debug "tabstop: %opt{tabstop}, indentwidth: %opt{indentwidth}"
+}
+def tabstop -params 0..1 %{
+    try %{
+        tabstop-impl %arg{1}
+    } catch %{
+        tabstop-impl 2
+    }
 }

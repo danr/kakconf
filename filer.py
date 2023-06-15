@@ -22,6 +22,8 @@ def go(root: str, opened: set[str], key: list[Any]=[]) -> Iterator[
         for entry in os.scandir(root):
             if entry.name.startswith('.'):
                 continue
+            if '.egg-info' in entry.name:
+                continue
             is_dir = entry.is_dir()
             entry_key = [*key, [not is_dir, entry.name]]
             suf = '/' if is_dir else ''
@@ -84,22 +86,22 @@ def init():
     ''')
 
 prelude = str(r'''
-    map window normal o     ': filer open        <ret>'
-    map window normal c     ': filer close       <ret>'
-    map window normal m     ': filer mark-toggle <ret>'
-    map window normal M     ': filer mark-set    <ret>'
-    map window normal <a-m> ': filer mark-remove <ret>'
+    map buffer normal o     ': filer open        <ret>'
+    map buffer normal c     ': filer close       <ret>'
+    map buffer normal m     ': filer mark-toggle <ret>'
+    map buffer normal M     ': filer mark-set    <ret>'
+    map buffer normal <a-m> ': filer mark-remove <ret>'
 
-    rmhl window/filer1
-    rmhl window/filer2
-    addhl window/filer1 regex ^[^\n]*/ 0:blue
-    addhl window/filer2 regex [^/\n]*/$ 0:green
+    rmhl buffer/filer1
+    rmhl buffer/filer2
+    addhl buffer/filer1 regex ^[^\n]*/ 0:blue
+    addhl buffer/filer2 regex [^/\n]*/$ 0:green
 
-    rmhl window/filerflags
-    addhl window/filerflags flag-lines magenta filer_flags
+    rmhl buffer/filerflags
+    addhl buffer/filerflags flag-lines magenta filer_flags
 
-    rmhooks window filer-redraw
-    hook -group filer-redraw window WinDisplay .* %(filer redraw)
+    rmhooks buffer filer-redraw
+    hook -group filer-redraw buffer WinDisplay .* %(filer redraw)
 
 ''')
 
@@ -117,6 +119,20 @@ def eval_generator(f: Callable[P, Iterator[str]]) -> Callable[P, None]:
         k.eval(*f(*args, **kws))
     return inner
 
+from threading import RLock
+from pathlib import Path
+from contextlib import contextmanager
+
+@contextmanager
+def chdir(path: str, __pwd_lock: RLock = RLock()):
+    at_begin = os.getcwd()
+    with __pwd_lock:
+        try:
+            os.chdir(path)
+            yield
+        finally:
+            os.chdir(at_begin)
+
 @k.cmd
 @eval_generator
 def filer(command: str='', *args: str) -> Iterator[str]:
@@ -124,101 +140,131 @@ def filer(command: str='', *args: str) -> Iterator[str]:
     filer_path = k.opt.filer_path.as_str()
     filer_open = k.opt.filer_open.as_str_list()
     filer_mark = k.opt.filer_mark.as_str_list()
+    pwd = k.pwd()
+    with chdir(pwd):
 
-    if not bufname.startswith('*filer'):
-        yield 'edit -scratch *filer*'
+        if not bufname.startswith('*filer'):
+            yield 'edit -scratch *filer*'
 
-    filer_open = set(filer_open)
-    filer_mark = set(filer_mark)
+        filer_open = set(filer_open)
+        filer_mark = set(filer_mark)
 
-    [selected_paths] = k.eval_sync(f'''
-        eval -save-regs s %(
-            eval -draft %(
-                exec <a-x><a-s>
-                {k.pk_send} %val(selections)
-            )
-        )
-    ''')
-
-    arg_paths = {path.strip('\n') for path in selected_paths}
-
-    at_end: list[str] = []
-
-    if command == 'open':
-        for arg in arg_paths:
-            if arg.endswith('/'):
-                filer_open |= {arg}
-            else:
-                yield q('spawn', arg)
-    elif command == 'close':
-        if any(arg in filer_open for arg in arg_paths):
-            filer_open -= arg_paths
-        else:
-            parents: set[str] = set()
-            for arg in arg_paths:
-                if arg not in filer_open:
-                    parents.add(r'^\Q' + str(Path(arg).parent) + r'/\E$')
-            parents_str: str = '(' + '|'.join(parents) + ')'
-            at_end += [
-                q('exec-if-you-can',
-                    '%s' + parents_str + '<ret>ghGL',
-                    q('fail', 'no parent'),
+        [selected_paths] = k.eval_sync(f'''
+            eval -save-regs s %(
+                eval -draft %(
+                    exec <a-x><a-s>
+                    {k.pk_send} %val(selections)
                 )
-            ]
-    elif command == 'mark-toggle':
-        if any(arg not in filer_mark for arg in arg_paths):
-            filer_mark |= arg_paths
-        else:
+            )
+        ''')
+
+        arg_paths = {path.strip('\n') for path in selected_paths}
+
+        at_end: list[str] = []
+
+        print('lol')
+
+        if command == 'open':
+            for arg in arg_paths:
+                if arg.endswith('/'):
+                    filer_open |= {arg}
+                else:
+                    yield q.debug('open', arg)
+                    # yield q.debug('nop %sh' + q('danneopen ' + shlex.quote(arg)))
+                    # yield 'nop %sh' + q('danneopen ' + shlex.quote(arg))
+                    yield q('bg', 'danneopen', arg)
+        elif command == 'close':
+            if any(arg in filer_open for arg in arg_paths):
+                filer_open -= arg_paths
+            else:
+                parents: set[str] = set()
+                for arg in arg_paths:
+                    if arg not in filer_open:
+                        parents.add(r'^\Q' + str(Path(arg).parent) + r'/\E$')
+                parents_str: str = '(' + '|'.join(parents) + ')'
+                at_end += [
+                    q('exec-if-you-can',
+                        '%s' + parents_str + '<ret>ghGL',
+                        q('fail', 'no parent'),
+                    )
+                ]
+        elif command == 'mark-toggle':
+            if any(arg not in filer_mark for arg in arg_paths):
+                filer_mark |= arg_paths
+            else:
+                filer_mark -= arg_paths
+        elif command == 'mark-set':
+            filer_mark = arg_paths
+        elif command == 'mark-remove':
             filer_mark -= arg_paths
-    elif command == 'mark-set':
-        filer_mark = arg_paths
-    elif command == 'mark-remove':
-        filer_mark -= arg_paths
-    elif command == 'redraw':
-        pass
-    else:
-        yield prelude
-        if command:
-            filer_path = command
-            yield q('set', 'window', 'filer_path', filer_path)
-
-    lines: list[str] = []
-    repls: list[str] = []
-
-    rows = list(sorted(go(filer_path, filer_open)))
-
-    paths: set[str] = set()
-
-    open_dirs = {filer_path}
-
-    for i, (key, is_dir, is_open, root, path, stat) in enumerate(rows, start=1):
-        paths.add(path)
-        if is_dir and is_open:
-            open_dirs.add(path)
-
-    filer_mark &= paths
-
-    for i, (key, is_dir, is_open, root, path, stat) in enumerate(rows, start=1):
-        if is_dir and is_open:
-            r = f'{show_ts(stat.st_mtime)} {"v":>6} '
-        elif is_dir and not is_open:
-            r = f'{show_ts(stat.st_mtime)} {">":>6} '
+        elif command == 'redraw':
+            pass
         else:
-            r = f'{show_ts(stat.st_mtime)} {show_size(stat.st_size):>6} '
+            yield prelude
+            if command:
+                filer_path = command
+                yield q('set', 'buffer', 'filer_path', filer_path)
 
-        if path in filer_mark:
-            r += '{yellow}✔ '
-        elif filer_mark:
-            r += '  '
+        lines: list[str] = []
+        repls: list[str] = []
 
-        repls += [f'{i}|{r}']
-        lines += [path]
+        rows = list(sorted(go(filer_path, filer_open)))
 
-    yield replace_buffer(*lines)
+        paths: set[str] = set()
 
-    yield 'set window filer_flags %val{timestamp} ' + q(*repls)
+        open_dirs = {filer_path}
 
-    yield q('set', 'window', 'filer_open', *sorted(filer_open))
-    yield q('set', 'window', 'filer_mark', *sorted(filer_mark))
+        for i, (key, is_dir, is_open, root, path, stat) in enumerate(rows, start=1):
+            paths.add(path)
+            if is_dir and is_open:
+                open_dirs.add(path)
 
-    yield from at_end
+        filer_mark &= paths
+
+        for i, (key, is_dir, is_open, root, path, stat) in enumerate(rows, start=1):
+            if is_dir and is_open:
+                r = f'{show_ts(stat.st_mtime)} {"v":>6} '
+            elif is_dir and not is_open:
+                r = f'{show_ts(stat.st_mtime)} {">":>6} '
+            else:
+                r = f'{show_ts(stat.st_mtime)} {show_size(stat.st_size):>6} '
+
+            if path in filer_mark:
+                r += '{yellow}✔ '
+            elif filer_mark:
+                r += '  '
+
+            repls += [f'{i}|{r}']
+            lines += [path]
+
+        yield replace_buffer(*lines)
+
+        yield 'set buffer filer_flags %val{timestamp} ' + q(*repls)
+
+        yield q('set', 'buffer', 'filer_open', *sorted(filer_open))
+        yield q('set', 'buffer', 'filer_mark', *sorted(filer_mark))
+
+        yield from at_end
+
+@k.cmd
+def filer_xargs(*args: str):
+    files = k.opt.filer_mark
+    if files:
+        parts = [
+            *args,
+            *k.opt.filer_mark,
+        ]
+        script = ' '.join(map(shlex.quote, parts))
+        k.eval(f'info %sh[{script}]')
+
+@k.cmd
+def filer_mv(dest: str):
+    filer_xargs(
+        'mv',
+        '--target-directory', dest,
+    )
+
+k.eval('''
+    alias global mv filer_mv
+    alias global filer-xargs filer_xargs
+''')

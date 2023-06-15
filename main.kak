@@ -18,12 +18,24 @@ def import -params 1 %{
     }
 }
 
-import ../libpykak/fork
-# fork-python -u "%opt{source_dir}/main.py"
-fork-shell eval '(
+nop %sh{
+    # kak_session
     cd "$kak_opt_source_dir"
-    python -u -m main
-)'
+    (
+        kakquote() { printf "%s" "$*" | sed "s/'/''/g; 1s/^/'/; \$s/\$/'/"; }
+
+        logfile="/tmp/pykak-$kak_session.log"
+        rm -f "$logfile"
+        touch "$logfile"
+        trap "rm -rf $logfile" EXIT
+
+        PYTHONUNBUFFERED=x python -m main |& tee -a "$logfile" &
+
+        tail -f "$logfile" | while IFS=$'\n' read line; do
+            printf '%s\n' "echo -debug -- $(kakquote "$line")" | kak -p "$kak_session"
+        done &
+    ) > /dev/null 2>&1 </dev/null &
+}
 
 try %{
     source "~/code/kakconf/plugins/plug.kak/rc/plug.kak"
@@ -33,6 +45,8 @@ plug andreyorst/plug.kak noload
 plug occivink/kakoune-vertical-selection
 plug occivink/kakoune-find
 plug occivink/kakoune-phantom-selection
+
+map global normal , <space>
 
 map global normal f     ": phantom-selection-add-selection<ret>"
 map global normal F     ": phantom-selection-select-all; phantom-selection-clear<ret>"
@@ -100,6 +114,8 @@ import zoom
 import wip2
 
 import ./kakoune-rectangles/kakoune-rectangles
+# import ./scrollbar.kak/scrollbar
+# hook global WinCreate .* %{ scrollbar-enable }
 
 # plug caksoylar/kakoune-smooth-scroll
 # plug caksoylar/kakoune-focus
