@@ -29,7 +29,7 @@ nop %sh{
         touch "$logfile"
         trap "rm -rf $logfile" EXIT
 
-        PYTHONUNBUFFERED=x python -m main |& tee -a "$logfile" &
+        PYTHONUNBUFFERED=x uv run --with ../libpykak,typing_extensions --reinstall python -m main |& tee -a "$logfile" &
 
         tail -f "$logfile" | while IFS=$'\n' read line; do
             printf '%s\n' "echo -debug -- $(kakquote "$line")" | kak -p "$kak_session"
@@ -69,7 +69,9 @@ plug delapouite/kakoune-i3
 # set global lsp_cmd "kak-lsp -s %val{session}"
 eval %sh{kak-lsp -s "$kak_session" --kakoune -c /home/dan/code/kakconf/kak-lsp.toml}
 
+try %{
 rmhl global/show-matching
+}
 plug laelath/kakoune-show-matching-insert config %{ addhl global/ ranges show_matching_insert }
 addhl global/ show-matching
 
@@ -113,7 +115,7 @@ import zoom
 
 import wip2
 
-import ./kakoune-rectangles/kakoune-rectangles
+# import ./kakoune-rectangles/kakoune-rectangles
 # import ./scrollbar.kak/scrollbar
 # hook global WinCreate .* %{ scrollbar-enable }
 

@@ -260,7 +260,7 @@ alias global colo colorscheme
 alias global wqa  write-all-quit
 alias global bd   delete-buffer
 alias global bd!  delete-buffer!
-alias global rg   grep
+# alias global rg   grep
 def setf -params 1 %{set buffer filetype %arg{1}}
 def auinfo %{set -add window autoinfo normal}
 def cd-here %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel 2>/dev/null || echo $PWD}}
