@@ -75,10 +75,10 @@ map global normal <a-O> <a-A>
 
 
 # g: next/prev match
-map global normal g     n978vh
-map global normal G     N978vh
-map global normal <a-g> <a-n>978vh
-map global normal <a-G> <a-N>978vh
+map global normal g     n
+map global normal G     N
+map global normal <a-g> <a-n>
+map global normal <a-G> <a-N>
 
 # J a'la vim
 def J %{exec -itersel <A-J><a-_>c<esc><,>vm }
@@ -109,7 +109,7 @@ def old_X %{
         exec -draft \; <a-k>\n<ret>
         exec X
     } catch %{
-        exec <a-x><a-:>
+        exec <x><a-:>
     }
 }
 
@@ -118,7 +118,7 @@ import line-selection
 map global normal v     ': line-select<ret>'
 map global normal V     ': old_X<ret>'
 map global normal <A-v> <A-x>
-map global normal D     '<a-x>dgi'
+map global normal D     '<x>dgi'
 
 # Macros, one selection and remove highlighting
 map global normal <esc> '<esc>: noh<ret><,>'
@@ -153,7 +153,8 @@ def viewport_preserve -params 1 %{
     exec %arg{1} vt %opt{viewport_y} vk
 }
 
-map global normal <c-g> ': viewport_preserve n<ret>'
+map global normal <a-g> ': viewport_preserve n<ret>'
+map global normal <a-G> ': viewport_preserve <a-n><ret>'
 
 # Selection fiddling
 map global normal * lbhe*
@@ -260,7 +261,10 @@ alias global colo colorscheme
 alias global wqa  write-all-quit
 alias global bd   delete-buffer
 alias global bd!  delete-buffer!
-# alias global rg   grep
+
+require-module grep
+alias global rg   grep
+
 def setf -params 1 %{set buffer filetype %arg{1}}
 def auinfo %{set -add window autoinfo normal}
 def cd-here %{cd %sh{cd $(dirname $kak_buffile); git rev-parse --show-toplevel 2>/dev/null || echo $PWD}}
@@ -318,7 +322,7 @@ hook -group reload-sxhkd global BufWritePost .*sxhkd.* %{
 hook -group kakrc global BufCreate .*sxhkd.* %{ set buffer filetype sh }
 hook -group kakrc global BufCreate .*bspwm.* %{ set buffer filetype sh }
 
-rmhl global/show-tabs
+try %{ rmhl global/show-tabs }
 addhl global/show-tabs show-whitespaces -tab ⭾ -tabpad · -lf ' ' -spc ' ' -nbsp ' '
 
 rmhooks global smarttab
@@ -513,10 +517,10 @@ map global block v '<a-a>p<a-;>[p'
 map global block W }p
 map global block V '{p'
 
-map global block t 'ghj<a-x>'
-map global block n 'ghk<a-x>'
-map global block T 'GHJ<a-x>'
-map global block N 'GHK<a-x>'
+map global block t 'ghj<x>'
+map global block n 'ghk<x>'
+map global block T 'GHJ<x>'
+map global block N 'GHK<x>'
 
 map global normal q ': enter-user-mode -lock block<ret>'
 
@@ -533,6 +537,10 @@ define-command select-view -docstring 'select visible part of buffer' %{
   hook window -once NormalKey .* %{
     set-option window scrolloff %opt{_scrolloff}
   }
+}
+
+define-command select-view-splitview -docstring 'select visible part of buffer' %{
+  exec 'Gt<a-:>ZlGbGl<a-;><a-z>a('
 }
 
 def toggle-wrap %{
@@ -603,3 +611,4 @@ def tabstop -params 0..1 %{
         tabstop-impl 2
     }
 }
+

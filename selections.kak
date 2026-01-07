@@ -42,16 +42,16 @@ hook -group kakrc global NormalKey [sS] %{
     }
 }
 
-hook global NormalKey .*[/?nN*].* highlight-search
+# hook global NormalKey .*[/?nN*].* highlight-search
 
-def highlight-search %{
-  noh
-  try %{
-    addhl window/ dynregex '%reg{/}' 0:Search 1:+u 2:+u
-  }
-}
+# def highlight-search %{
+#   noh
+#   try %{
+#     addhl window/ dynregex '%reg{/}' 0:Search 1:+u 2:+u
+#   }
+# }
 
-def noh %{
-  rmhl window/dynregex_%reg{<slash>}_0:Search_1:+u_2:+u
-}
+# def noh %{
+#   rmhl window/dynregex_%reg{<slash>}_0:Search_1:+u_2:+u
+# }
 

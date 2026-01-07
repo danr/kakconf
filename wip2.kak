@@ -27,3 +27,61 @@ def fiddle -params 1 %{
     connect-shell kitty vire -cr "%arg{1}.py"
 }
 
+try %{
+    eval %sh{kak-popup init}
+}
+
+def complete %{
+    eval -draft %{
+        exec <a-?>\n\n\K\S<ret>
+        echo -to-file /home/dan/request.txt %val{selection}
+    }
+}
+map global jump o ': complete<ret>'
+
+
+def claude -params .. %{
+    connect-terminal restrict.py claude "File: %val{buffile}
+Selection line and columns: %val{selection_desc}
+Selection content: %val{selection}
+%arg{@}"
+}
+
+alias global cc claude
+
+def claude-with-clipboard -params .. %{
+    connect-terminal restrict.py claude "File: %val{buffile}
+Selection line and columns: %val{selection_desc}
+Selection content: ```
+%val{selection}
+```
+Clipboard content: ```
+%sh{xclip -o}
+```
+%arg{@}"
+}
+
+alias global cb claude-with-clipboard
+
+def claude-yolo -params .. %{
+    connect-terminal restrict.py claude --dangerously-skip-permissions "File: %val{buffile}
+Selection line and columns: %val{selection_desc}
+Selection content: %val{selection}
+%arg{@}"
+}
+
+alias global cy claude-yolo
+
+def claude-with-clipboard-yolo -params .. %{
+    connect-terminal restrict.py claude --dangerously-skip-permissions "File: %val{buffile}
+Selection line and columns: %val{selection_desc}
+Selection content: ```
+%val{selection}
+```
+Clipboard content: ```
+%sh{xclip -o}
+```
+%arg{@}"
+}
+
+alias global cby claude-with-clipboard-yolo

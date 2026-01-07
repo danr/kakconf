@@ -174,24 +174,24 @@ map global normal <c-/> ': enter-mode search <ret>'
 # From alexherbo2/move-line.kak
 def move-lines-down -docstring 'Move selected lines down' %{
     # Select whole lines
-    execute-keys '<a-x><a-_><a-:>'
+    execute-keys '<x><a-_><a-:>'
 
     # Iterate each selection and move the lines below
     evaluate-commands -itersel %{
         execute-keys -draft 'w'
-        execute-keys -draft 'Zj<a-x>dzP'
+        execute-keys -draft 'Zj<x>dzP'
     }
 }
 
 # From alexherbo2/move-line.kak
 def move-lines-up -docstring 'Move selected lines up' %{
     # Select whole lines
-    execute-keys '<a-x><a-_><a-:>'
+    execute-keys '<x><a-_><a-:>'
 
     # Iterate each selection and move the lines above
     evaluate-commands -itersel %{
         execute-keys -draft '<a-;>b'
-        execute-keys -draft '<a-;>Zk<a-x>dzp'
+        execute-keys -draft '<a-;>Zk<x>dzp'
     }
 }
 

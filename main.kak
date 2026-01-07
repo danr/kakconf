@@ -69,12 +69,6 @@ plug delapouite/kakoune-i3
 # set global lsp_cmd "kak-lsp -s %val{session}"
 eval %sh{kak-lsp -s "$kak_session" --kakoune -c /home/dan/code/kakconf/kak-lsp.toml}
 
-try %{
-rmhl global/show-matching
-}
-plug laelath/kakoune-show-matching-insert config %{ addhl global/ ranges show_matching_insert }
-addhl global/ show-matching
-
 plug occivink/kakoune-interactive-itersel
 plug occivink/kakoune-sudo-write
 

@@ -152,7 +152,7 @@ def filer(command: str='', *args: str) -> Iterator[str]:
         [selected_paths] = k.eval_sync(f'''
             eval -save-regs s %(
                 eval -draft %(
-                    exec <a-x><a-s>
+                    exec x<a-s>
                     {k.pk_send} %val(selections)
                 )
             )

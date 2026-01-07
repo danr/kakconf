@@ -25,6 +25,12 @@ for start, row in maps.items():
         if re.match("[a-z:',.]$", a):
             ckm[a] = c
 
+ckm['3'] = "'''"
+ckm['4'] = '"""'
+ckm['8'] = '('
+ckm['9'] = ')'
+ckm['w'] = 'import '
+
 def init():
     k.eval(
         'rmhooks global commas',
