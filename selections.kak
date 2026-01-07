@@ -51,7 +51,9 @@ hook -group kakrc global NormalKey [sS] %{
 #   }
 # }
 
-# def noh %{
-#   rmhl window/dynregex_%reg{<slash>}_0:Search_1:+u_2:+u
-# }
+def noh %{
+    try %{
+      rmhl window/dynregex_%reg{<slash>}_0:Search_1:+u_2:+u
+     }
+}
 
