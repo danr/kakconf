@@ -41,47 +41,85 @@ map global jump o ': complete<ret>'
 
 
 def claude -params .. %{
-    connect-terminal restrict.py claude "File: %val{buffile}
-Selection line and columns: %val{selection_desc}
-Selection content: %val{selection}
+    connect-terminal restrict.py claude "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
 %arg{@}"
 }
 
 alias global cc claude
 
 def claude-with-clipboard -params .. %{
-    connect-terminal restrict.py claude "File: %val{buffile}
-Selection line and columns: %val{selection_desc}
-Selection content: ```
+    connect-terminal restrict.py claude "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
 %val{selection}
-```
-Clipboard content: ```
+</selection>
+<clipboard>
 %sh{xclip -o}
-```
+</clipboard>
 %arg{@}"
 }
 
 alias global cb claude-with-clipboard
 
 def claude-yolo -params .. %{
-    connect-terminal restrict.py claude --dangerously-skip-permissions "File: %val{buffile}
-Selection line and columns: %val{selection_desc}
-Selection content: %val{selection}
+    connect-terminal restrict.py claude --dangerously-skip-permissions "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
 %arg{@}"
 }
 
 alias global cy claude-yolo
 
 def claude-with-clipboard-yolo -params .. %{
-    connect-terminal restrict.py claude --dangerously-skip-permissions "File: %val{buffile}
-Selection line and columns: %val{selection_desc}
-Selection content: ```
+    connect-terminal restrict.py claude --dangerously-skip-permissions "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
 %val{selection}
-```
-Clipboard content: ```
+</selection>
+<clipboard>
 %sh{xclip -o}
-```
+</clipboard>
 %arg{@}"
 }
 
 alias global cby claude-with-clipboard-yolo
+
+def codex -params .. %{
+    connect-terminal codex --sandbox workspace-write --ask-for-approval untrusted "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
+%arg{@}"
+}
+
+alias global cx codex
+
+def codex-with-clipboard -params .. %{
+    connect-terminal codex --sandbox workspace-write --ask-for-approval untrusted "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
+<clipboard>
+%sh{xclip -o}
+</clipboard>
+%arg{@}"
+}
+
+alias global cxb codex-with-clipboard
+
+def codex-yolo -params .. %{
+    connect-terminal restrict.py codex --dangerously-bypass-approvals-and-sandbox "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
+%arg{@}"
+}
+
+alias global cxy codex-yolo
+
+def codex-with-clipboard-yolo -params .. %{
+    connect-terminal restrict.py codex --dangerously-bypass-approvals-and-sandbox "<selection file=%val{buffile} desc=%val{selection_desc} cursor_line=%val{cursor_line} cursor_col=%val{cursor_column}>
+%val{selection}
+</selection>
+<clipboard>
+%sh{xclip -o}
+</clipboard>
+%arg{@}"
+}
+
+alias global cxby codex-with-clipboard-yolo
