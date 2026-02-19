@@ -1,7 +1,14 @@
 
 eval %sh{krc kak-defs}
 def connect-x11-terminal -params .. %{ connect x11-terminal %arg{@} }
-alias global t connect-x11-terminal
+def connect-tmux-terminal -params .. %{ connect tmux-terminal-window %arg{@} }
+evaluate-commands %sh{
+    if [ -n "$DISPLAY" ]; then
+        echo 'alias global t connect-x11-terminal'
+    elif [ -n "$TMUX" ]; then
+        echo 'alias global t connect-tmux-terminal'
+    fi
+}
 
 rmhooks global krc
 

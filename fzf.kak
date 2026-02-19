@@ -1,4 +1,9 @@
 
+try %{
+    decl str termcmd %opt{termcmd}
+} catch %{
+    decl str termcmd ''
+}
 decl str termcmd_save %opt{termcmd}
 
 def fzf-kitty -params 2..3 %{

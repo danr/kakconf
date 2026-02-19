@@ -1,6 +1,13 @@
 set global startup_info_version 20301010
 
-require-module x11
+evaluate-commands %sh{
+    if [ -n "$DISPLAY" ]; then
+        echo 'require-module x11'
+        echo 'echo -debug "x11: loaded"'
+    else
+        echo 'echo -debug "x11: skipping (no DISPLAY)"'
+    fi
+}
 
 hook global BufCreate [^*].* %{
     nop %sh{
