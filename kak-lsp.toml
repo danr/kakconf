@@ -274,7 +274,7 @@ intelephense.storagePath = "/tmp/intelephense"
 
 [language.python]
 filetypes = ["python"]
-roots = ["pyrightconfig.json", "requirements.txt", "setup.py", ".git", ".hg"]
+roots = ["pyrightconfig.json", "pyproject.toml", "requirements.txt", "setup.py", ".git", ".hg"]
 command = "uv"
 args = ["run", "--with", "basedpyright", "basedpyright-langserver", "--stdio"]
 offset_encoding = "utf-8"

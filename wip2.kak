@@ -27,10 +27,6 @@ def fiddle -params 1 %{
     connect-shell kitty vire -cr "%arg{1}.py"
 }
 
-try %{
-    eval %sh{kak-popup init}
-}
-
 def complete %{
     eval -draft %{
         exec <a-?>\n\n\K\S<ret>
