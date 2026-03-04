@@ -19,7 +19,7 @@ try %{
 }
 
 set global base00 black
-set global base01 bright-green
+set global base01 'rgb:444444'
 set global base02 bright-yellow
 set global base03 bright-black
 set global base04 bright-blue
