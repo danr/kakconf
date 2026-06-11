@@ -133,7 +133,7 @@ map global normal <ret>   '<,>: pagewise k<ret>'
 decl int viewport_h
 decl int viewport_y
 def viewport_update %{
-    eval -draft -save-regs ct %{
+    eval -draft -save-regs sct %{
         eval -draft -no-hooks %{
             reg c %val{cursor_line}
             exec gt
@@ -145,7 +145,13 @@ def viewport_update %{
 
 def pagewise -params 1 %{
     viewport_update
-    exec %val{window_height} %arg{1} vt %opt{viewport_y} vk
+    eval -save-regs s %{
+        # temporarily remove scrolloff otherwise vt takes it into account
+        reg s %opt{scrolloff}
+        set current scrolloff 0,0
+        exec %val{window_height} %arg{1} vt %opt{viewport_y} vk
+        set current scrolloff %reg{s}
+    }
 }
 
 def viewport_preserve -params 1 %{
