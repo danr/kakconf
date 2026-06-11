@@ -145,18 +145,18 @@ def viewport_update %{
 
 def pagewise -params 1 %{
     viewport_update
+    viewport_preserve %val{window_height} %arg{1}
+}
+
+def viewport_preserve -params .. %{
+    viewport_update
     eval -save-regs s %{
         # temporarily remove scrolloff otherwise vt takes it into account
         reg s %opt{scrolloff}
         set current scrolloff 0,0
-        exec %val{window_height} %arg{1} vt %opt{viewport_y} vk
+        exec %arg{@} vt %opt{viewport_y} vk
         set current scrolloff %reg{s}
     }
-}
-
-def viewport_preserve -params 1 %{
-    viewport_update
-    exec %arg{1} vt %opt{viewport_y} vk
 }
 
 map global normal <a-g> ': viewport_preserve n<ret>'
