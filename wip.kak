@@ -186,10 +186,17 @@ map -docstring '(R) paste and replace' global user r R
 # Paste and replace
 map global normal <c-r> R
 
-# Xclipboard
-map -docstring 'xsel paste'    global user P %{<a-!>xclip -o<ret>}
-map -docstring 'xsel Paste'    global user p %{!xclip -o<ret>}
-map -docstring 'xsel replace'  global user R %{: reg w "%sh{xclip -o}"<ret>"wR}
+# Clipboard (backend selected in main.kak: wl-clipboard or xclip/xsel)
+def -hidden clipboard-paste-append %{ exec "<a-!>%opt{clipboard_paste}<ret>" }
+def -hidden clipboard-paste-insert %{ exec "!%opt{clipboard_paste}<ret>" }
+def -hidden clipboard-paste-replace %{
+  reg w %sh{ $kak_opt_clipboard_paste }
+  exec '"wR'
+}
+
+map -docstring 'clipboard paste'    global user P ': clipboard-paste-append<ret>'
+map -docstring 'clipboard Paste'    global user p ': clipboard-paste-insert<ret>'
+map -docstring 'clipboard replace'  global user R ': clipboard-paste-replace<ret>'
 
 def xcopy -params 0..1 %{eval %sh{
   if [ -z "$1" ]; then
@@ -197,8 +204,11 @@ def xcopy -params 0..1 %{eval %sh{
   else
     val=$1
   fi
-  echo -n "$val" | xsel --input --primary
-  echo -n "$val" | xsel --input --clipboard
+  # wl-copy (and xclip) fork a daemon that must stay alive to serve the
+  # selection. It inherits this %sh block's stdout/stderr pipe, so kak keeps
+  # reading and blocks until the daemon dies. Detach the fds and the session.
+  printf %s "$val" | setsid -f $kak_opt_clipboard_copy_primary   > /dev/null 2>&1
+  printf %s "$val" | setsid -f $kak_opt_clipboard_copy_clipboard > /dev/null 2>&1
   l=$(echo -n "$val" | wc -l)
   val=${val//./..}
   if [[ $l -eq 0 ]]; then

@@ -9,6 +9,25 @@ evaluate-commands %sh{
     fi
 }
 
+# Clipboard backend: wl-clipboard under wayland (niri), xclip/xsel under X11.
+# Resolved once from the server's environment.
+decl -hidden str clipboard_paste
+decl -hidden str clipboard_copy_primary
+decl -hidden str clipboard_copy_clipboard
+eval %sh{
+    if [ -n "$WAYLAND_DISPLAY" ] && command -v wl-paste > /dev/null 2>&1; then
+        echo 'set global clipboard_paste %{wl-paste --no-newline}'
+        echo 'set global clipboard_copy_primary %{wl-copy --primary}'
+        echo 'set global clipboard_copy_clipboard %{wl-copy}'
+        echo 'echo -debug "clipboard: wl-clipboard"'
+    else
+        echo 'set global clipboard_paste %{xclip -o}'
+        echo 'set global clipboard_copy_primary %{xsel --input --primary}'
+        echo 'set global clipboard_copy_clipboard %{xsel --input --clipboard}'
+        echo 'echo -debug "clipboard: xclip/xsel"'
+    fi
+}
+
 hook global BufCreate [^*].* %{
     nop %sh{
         echo "$kak_buffile" >> ~/.mru

@@ -50,7 +50,7 @@ def claude-with-clipboard -params .. %{
 %val{selection}
 </selection>
 <clipboard>
-%sh{xclip -o}
+%sh{ $kak_opt_clipboard_paste }
 </clipboard>
 %arg{@}"
 }
@@ -71,7 +71,7 @@ def claude-with-clipboard-yolo -params .. %{
 %val{selection}
 </selection>
 <clipboard>
-%sh{xclip -o}
+%sh{ $kak_opt_clipboard_paste }
 </clipboard>
 %arg{@}"
 }
@@ -92,7 +92,7 @@ def codex-with-clipboard -params .. %{
 %val{selection}
 </selection>
 <clipboard>
-%sh{xclip -o}
+%sh{ $kak_opt_clipboard_paste }
 </clipboard>
 %arg{@}"
 }
@@ -113,7 +113,7 @@ def codex-with-clipboard-yolo -params .. %{
 %val{selection}
 </selection>
 <clipboard>
-%sh{xclip -o}
+%sh{ $kak_opt_clipboard_paste }
 </clipboard>
 %arg{@}"
 }

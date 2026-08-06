@@ -154,7 +154,7 @@ def goto_file_sloppy(fragment: str):
     k.eval(f'edit {filename} {line}')
 
 k.eval('''
-    map global user g ': goto_file_sloppy %sh{xclip -o}<ret>'
+    map global user g ': goto_file_sloppy %sh{ $kak_opt_clipboard_paste }<ret>'
 ''')
 
 @k.cmd
