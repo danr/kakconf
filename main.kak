@@ -91,9 +91,35 @@ plug delapouite/kakoune-livedown
 plug delapouite/kakoune-i3
 # plug delapouite/kakoune-buffers
 
-# plug ul/kak-lsp do "cargo build --release --locked; cargo install --force --path ."
-# set global lsp_cmd "kak-lsp -s %val{session}"
-eval %sh{kak-lsp -s "$kak_session" --kakoune -c /home/dan/code/kakconf/kak-lsp.toml}
+eval %sh{kak-lsp -s "$kak_session" --kakoune}
+set global lsp_timeout 0
+
+remove-hooks global lsp-filetype-python
+hook -group lsp-filetype-python global BufSetOption filetype=python %{
+    set-option buffer lsp_servers %{
+        [basedpyright]
+        root_globs = ["pyrightconfig.json", "pyproject.toml", "setup.py", ".git", ".hg"]
+        command = "uvx"
+        args = ["--from", "basedpyright", "basedpyright-langserver", "--stdio"]
+    }
+}
+
+hook global -group kakrc WinSetOption filetype=python lsp-setup
+
+# hook global -group kakrc WinSetOption filetype=go lsp-setup
+
+def lsp-setup %{
+    # lsp-auto-hover-enable
+    map -docstring 'lsp toggle auto-hover' window user H ': toggle window lsp-auto-hover-enable lsp-auto-hover-disable<ret>'
+    map -docstring 'lsp mode'    window user l ': enter-user-mode lsp<ret>'
+    map -docstring 'lsp hover'   window user h ': lsp-hover<ret>'
+    map -docstring 'lsp goto'    window user . ': lsp-definition<ret>'
+    map -docstring 'lsp prev'    window user n ': lsp-find-error --previous<ret>: lsp-hover<ret>'
+    map -docstring 'lsp next'    window user t ': lsp-find-error<ret>: lsp-hover<ret>'
+    lsp-enable-window
+}
+
+
 
 plug occivink/kakoune-interactive-itersel
 plug occivink/kakoune-sudo-write

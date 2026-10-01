@@ -407,20 +407,6 @@ hook -group kakrc global BufSetOption filetype=pug %{
   set buffer disabled_hooks (pug-hooks|pug-indent)
 }
 
-hook global -group kakrc WinSetOption filetype=python lsp-setup
-hook global -group kakrc WinSetOption filetype=go lsp-setup
-
-def lsp-setup %{
-    # lsp-auto-hover-enable
-    map -docstring 'lsp hover'   window user H ': toggle window lsp-auto-hover-enable lsp-auto-hover-disable<ret>'
-    map -docstring 'lsp mode'    window user l ': enter-user-mode lsp<ret>'
-    map -docstring 'lsp hover'   window user h ': lsp-hover<ret>'
-    map -docstring 'lsp goto'    window user . ': lsp-definition<ret>'
-    map -docstring 'lsp prev'    window user n ': lsp-find-error --previous<ret>: lsp-hover<ret>'
-    map -docstring 'lsp next'    window user t ': lsp-find-error<ret>: lsp-hover<ret>'
-    lsp-enable-window
-}
-
 def ide %{
     rename-client main
     new rename-client docs
@@ -569,7 +555,24 @@ def toggle-wrap %{
 
 # Suggested mapping
 
+def try-lsp-disable-window %{
+    try lsp-disable-window
+}
+
 map global user v ': select-view<ret>' -docstring 'select view'
+map global user d ': try-lsp-disable-window<ret>' -docstring 'lsp disable window'
+map global user D ': lsp-disable-all<ret>' -docstring 'lsp disable all windows'
+
+# Disables lsp in the current window and in every window displayed or given a
+# filetype later. The WinSetOption hook is registered after the lsp-setup hook
+# in main.kak, so it runs after lsp-setup has enabled lsp in a new window.
+# Undo with: remove-hooks global lsp-disable-hook
+def lsp-disable-all %{
+    try-lsp-disable-window
+    remove-hooks global lsp-disable-hook
+    hook -group lsp-disable-hook global WinSetOption filetype=.* try-lsp-disable-window
+    hook -group lsp-disable-hook global WinDisplay .* try-lsp-disable-window
+}
 
 # https://github.com/shachaf/kak/blob/master/kakrc
 def selection-hull \
